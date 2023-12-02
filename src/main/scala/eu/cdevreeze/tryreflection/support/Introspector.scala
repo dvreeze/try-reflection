@@ -40,6 +40,7 @@ object Introspector:
         getClassNameWithSuperTypes.appendStringToLastLine(" {"),
         LineGroup
           .from(
+            LineGroup.from(clazz.getDeclaredClasses().toSeq.filter(_.isInterface).map(c => forInterface(c).introspect): _*),
             LineGroup.from(clazz.getDeclaredClasses().toSeq.filterNot(_.isInterface).map(c => forClass(c).introspect): _*),
             LineGroup.from(clazz.getDeclaredConstructors().toSeq.map(c => forConstructor(c).introspect): _*),
             LineGroup.from(clazz.getDeclaredFields().toSeq.map(f => forField(f).introspect): _*),
@@ -107,6 +108,7 @@ object Introspector:
         getInterfaceNameWithSuperTypes.appendStringToLastLine(" {"),
         LineGroup
           .from(
+            LineGroup.from(clazz.getDeclaredClasses().toSeq.filter(_.isInterface).map(c => forInterface(c).introspect): _*),
             LineGroup.from(clazz.getDeclaredClasses().toSeq.filterNot(_.isInterface).map(c => forClass(c).introspect): _*),
             LineGroup.from(clazz.getDeclaredFields().toSeq.map(f => forField(f).introspect): _*),
             LineGroup.from(clazz.getDeclaredMethods().toSeq.map(m => forMethod(m).introspect): _*)
