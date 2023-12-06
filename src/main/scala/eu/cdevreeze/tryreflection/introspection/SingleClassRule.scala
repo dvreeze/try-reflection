@@ -16,9 +16,9 @@
 
 package eu.cdevreeze.tryreflection.introspection
 
-import eu.cdevreeze.tryreflection.introspection.Rule.RuleResult
+import io.circe.Json
 
-import util.chaining.scalaUtilChainingOps
+import scala.util.chaining.scalaUtilChainingOps
 
 /**
  * Introspection rule taking a single Class as input.
@@ -28,7 +28,7 @@ import util.chaining.scalaUtilChainingOps
  */
 trait SingleClassRule extends Rule:
 
-  final def introspect(classes: Seq[Class[_]]): RuleResult =
-    classes.flatMap(clazz => introspect(clazz).results).pipe(RuleResult.apply)
+  final def introspect(classes: Seq[Class[_]]): Json =
+    classes.map(clazz => introspect(clazz)).pipe(Json.arr)
 
-  def introspect(clazz: Class[_]): RuleResult
+  def introspect(clazz: Class[_]): Json

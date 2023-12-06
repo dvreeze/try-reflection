@@ -29,6 +29,12 @@ ThisBuild / publishTo := {
 ThisBuild / pomExtra := pomData
 ThisBuild / pomIncludeRepository := { _ => false }
 
+val circeVersion = "0.14.1"
+
+ThisBuild / libraryDependencies += "io.circe" %% "circe-core" % circeVersion
+ThisBuild / libraryDependencies += "io.circe" %% "circe-generic" % circeVersion
+ThisBuild / libraryDependencies += "io.circe" %% "circe-parser" % circeVersion
+
 ThisBuild / Test / fork := true
 
 lazy val root = project.in(file("."))

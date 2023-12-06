@@ -16,9 +16,7 @@
 
 package eu.cdevreeze.tryreflection.introspection
 
-import eu.cdevreeze.tryreflection.introspection.Rule.RuleResult
-
-import java.lang.reflect.{Field, Method, Type}
+import io.circe.Json
 
 /**
  * Introspection rule.
@@ -28,20 +26,4 @@ import java.lang.reflect.{Field, Method, Type}
  */
 trait Rule:
 
-  def introspect(classes: Seq[Class[_]]): RuleResult
-
-object Rule:
-
-  enum Status:
-    case Ok, Warn, Error
-
-  enum Result(status: Status, message: String, context: Seq[Class[_]]):
-    case MethodResult(m: Method, status: Status, message: String, context: Seq[Class[_]]) extends Result(status, message, context)
-    case FieldResult(f: Field, status: Status, message: String, context: Seq[Class[_]]) extends Result(status, message, context)
-    case ClassResult(c: Class[_], status: Status, message: String, context: Seq[Class[_]]) extends Result(status, message, context)
-    case TypeResult(tpe: Type, status: Status, message: String, context: Seq[Class[_]]) extends Result(status, message, context)
-    case OtherResult(status: Status, message: String, context: Seq[Class[_]]) extends Result(status, message, context)
-
-  final case class RuleResult(results: Seq[Result])
-
-end Rule
+  def introspect(classes: Seq[Class[_]]): Json

@@ -16,8 +16,8 @@
 
 package eu.cdevreeze.tryreflection.console
 
-import eu.cdevreeze.tryreflection.introspection.Rule.RuleResult
 import eu.cdevreeze.tryreflection.introspection.rules.ShowSupertypes
+import io.circe.Json
 
 /**
  * Program running rule ShowSupertypes.
@@ -29,5 +29,5 @@ object ShowSupertypesRunner:
 
   def main(args: Array[String]): Unit =
     val classes: Seq[Class[_]] = args.toSeq.map(Class.forName)
-    val ruleResult: RuleResult = ShowSupertypes.introspect(classes)
-    ruleResult.results.foreach(println)
+    val ruleResult: Json = ShowSupertypes.introspect(classes)
+    println(ruleResult)
