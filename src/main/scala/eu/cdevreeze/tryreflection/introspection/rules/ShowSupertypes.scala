@@ -16,10 +16,11 @@
 
 package eu.cdevreeze.tryreflection.introspection.rules
 
-import eu.cdevreeze.tryreflection.introspection.SingleClassRule
+import eu.cdevreeze.tryreflection.introspection.Rule
 import io.circe.Json
 
 import java.lang.reflect.{ParameterizedType, Type}
+import scala.util.chaining.scalaUtilChainingOps
 
 /**
  * Rule that shows the super-classes and extended interfaces of a class.
@@ -27,9 +28,12 @@ import java.lang.reflect.{ParameterizedType, Type}
  * @author
  *   Chris de Vreeze
  */
-object ShowSupertypes extends SingleClassRule:
+final class ShowSupertypes(val classes: Seq[Class[_]]) extends Rule:
 
-  def introspect(clazz: Class[_]): Json =
+  def run(): Json =
+    classes.map(clazz => run(clazz)).pipe(Json.arr)
+
+  def run(clazz: Class[_]): Json =
     val superclasses: Seq[Type] = findSuperclasses(clazz)
     val interfaces: Seq[Type] =
       superclasses.prepended(clazz).flatMap(t => toClassOption(t)).flatMap(findInterfaces).distinct
@@ -42,7 +46,7 @@ object ShowSupertypes extends SingleClassRule:
       "extendedInterfaces" ->
         Json.fromValues(interfaces.map(_.toString).map(Json.fromString))
     )
-  end introspect
+  end run
 
   private def findSuperclasses(clazz: Class[_]): Seq[Type] =
     val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())

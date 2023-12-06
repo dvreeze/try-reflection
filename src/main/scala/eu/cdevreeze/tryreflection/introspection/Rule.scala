@@ -26,4 +26,4 @@ import io.circe.Json
  */
 trait Rule:
 
-  def introspect(classes: Seq[Class[_]]): Json
+  def run(): Json

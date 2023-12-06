@@ -29,5 +29,5 @@ object ShowSupertypesRunner:
 
   def main(args: Array[String]): Unit =
     val classes: Seq[Class[_]] = args.toSeq.map(Class.forName)
-    val ruleResult: Json = ShowSupertypes.introspect(classes)
+    val ruleResult: Json = ShowSupertypes(classes).run()
     println(ruleResult)
