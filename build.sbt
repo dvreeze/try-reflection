@@ -35,6 +35,8 @@ ThisBuild / libraryDependencies += "io.circe" %% "circe-core" % circeVersion
 ThisBuild / libraryDependencies += "io.circe" %% "circe-generic" % circeVersion
 ThisBuild / libraryDependencies += "io.circe" %% "circe-parser" % circeVersion
 
+ThisBuild / libraryDependencies += "org.burningwave" % "core" % "12.64.2"
+
 ThisBuild / Test / fork := true
 
 lazy val root = project.in(file("."))
