@@ -32,10 +32,10 @@ final class FindUsagesOfType(val classesToFind: Seq[Class[_]]) extends ClassFunc
     val results: Seq[Json] =
       for {
         classToFind <- classesToFind
-      } yield run(classToFind, clazz)
+      } yield findClass(classToFind, clazz)
     Json.fromValues(results)
 
-  def run(classToFind: Class[_], classToInspect: Class[_]): Json =
+  private def findClass(classToFind: Class[_], classToInspect: Class[_]): Json =
     val superclassOption = Option(classToInspect.getSuperclass())
     val interfaces = classToInspect.getInterfaces().toSeq
     val constructors = classToInspect.getDeclaredConstructors()
@@ -70,7 +70,7 @@ final class FindUsagesOfType(val classesToFind: Seq[Class[_]]) extends ClassFunc
         "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
         "classToFind" -> Json.fromString(classToFind.getTypeName)
       )
-  end run
+  end findClass
 
   private def areEqual(class1: Class[_], class2: Class[_]): Boolean =
     class1.isAssignableFrom(class2) && class2.isAssignableFrom(class1)
