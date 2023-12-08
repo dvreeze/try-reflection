@@ -16,7 +16,7 @@
 
 package eu.cdevreeze.tryreflection.console
 
-import eu.cdevreeze.tryreflection.introspection.classfunctions.FindUsagesOfType
+import eu.cdevreeze.tryreflection.introspection.classfunctions.FindUsagesOfTypes
 import io.circe.Json
 import org.burningwave.core.assembler.ComponentContainer
 import org.burningwave.core.classes.SearchConfig
@@ -47,7 +47,7 @@ object ShowTypeUsageRunner:
 
     val classUniverse: Seq[Class[_]] = findClassesToInspect(packageNameFilters)
 
-    val classFunction = FindUsagesOfType(classesToFind)
+    val classFunction = FindUsagesOfTypes(classesToFind)
     val jsons: Seq[Json] = classUniverse.map(cls => classFunction(cls))
     val result: Json = Json.fromValues(jsons)
     println(result)

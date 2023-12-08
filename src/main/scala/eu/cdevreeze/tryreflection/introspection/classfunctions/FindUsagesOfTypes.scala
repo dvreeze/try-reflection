@@ -26,7 +26,7 @@ import io.circe.Json
  * @author
  *   Chris de Vreeze
  */
-final class FindUsagesOfType(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson:
+final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson:
 
   def apply(clazz: Class[_]): Json =
     val results: Seq[Json] =
@@ -75,4 +75,4 @@ final class FindUsagesOfType(val classesToFind: Seq[Class[_]]) extends ClassFunc
   private def areEqual(class1: Class[_], class2: Class[_]): Boolean =
     class1.isAssignableFrom(class2) && class2.isAssignableFrom(class1)
 
-end FindUsagesOfType
+end FindUsagesOfTypes
