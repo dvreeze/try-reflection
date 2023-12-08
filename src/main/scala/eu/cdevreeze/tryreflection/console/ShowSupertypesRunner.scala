@@ -16,11 +16,13 @@
 
 package eu.cdevreeze.tryreflection.console
 
-import eu.cdevreeze.tryreflection.introspection.rules.ShowSupertypes
+import eu.cdevreeze.tryreflection.introspection.classfunctions.GetSupertypes
 import io.circe.Json
 
 /**
- * Program running rule ShowSupertypes.
+ * Program repeatedly running ClassFunction GetSupertypes.
+ *
+ * TODO Rename
  *
  * @author
  *   Chris de Vreeze
@@ -29,5 +31,6 @@ object ShowSupertypesRunner:
 
   def main(args: Array[String]): Unit =
     val classes: Seq[Class[_]] = args.toSeq.map(Class.forName)
-    val ruleResult: Json = ShowSupertypes(classes).run()
-    println(ruleResult)
+    val jsons: Seq[Json] = classes.map(cls => GetSupertypes(cls))
+    val result: Json = Json.fromValues(jsons)
+    println(result)

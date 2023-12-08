@@ -14,26 +14,22 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.tryreflection.introspection.rules
+package eu.cdevreeze.tryreflection.introspection.classfunctions
 
-import eu.cdevreeze.tryreflection.introspection.Rule
+import eu.cdevreeze.tryreflection.introspection.ClassFunctionReturningJson
 import io.circe.Json
 
 import java.lang.reflect.{ParameterizedType, Type}
-import scala.util.chaining.scalaUtilChainingOps
 
 /**
- * Rule that shows the super-classes and extended interfaces of a class.
+ * Class function that finds the super-classes and extended interfaces of a class.
  *
  * @author
  *   Chris de Vreeze
  */
-final class ShowSupertypes(val classes: Seq[Class[_]]) extends Rule:
+object GetSupertypes extends ClassFunctionReturningJson:
 
-  def run(): Json =
-    classes.map(clazz => run(clazz)).pipe(Json.arr)
-
-  def run(clazz: Class[_]): Json =
+  def apply(clazz: Class[_]): Json =
     val superclasses: Seq[Type] = findSuperclasses(clazz)
     val interfaces: Seq[Type] =
       superclasses.prepended(clazz).flatMap(t => toClassOption(t)).flatMap(findInterfaces).distinct
@@ -46,7 +42,7 @@ final class ShowSupertypes(val classes: Seq[Class[_]]) extends Rule:
       "extendedInterfaces" ->
         Json.fromValues(interfaces.map(_.toString).map(Json.fromString))
     )
-  end run
+  end apply
 
   private def findSuperclasses(clazz: Class[_]): Seq[Type] =
     val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
@@ -66,4 +62,4 @@ final class ShowSupertypes(val classes: Seq[Class[_]]) extends Rule:
       case ptype: ParameterizedType => Option(ptype.getRawType).collect { case cls: Class[_] => cls }
       case _                        => None
 
-end ShowSupertypes
+end GetSupertypes

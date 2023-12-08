@@ -16,16 +16,19 @@
 
 package eu.cdevreeze.tryreflection.console
 
-import eu.cdevreeze.tryreflection.introspection.rules.ShowTypeUsage
+import eu.cdevreeze.tryreflection.introspection.classfunctions.FindUsagesOfType
 import io.circe.Json
 import org.burningwave.core.assembler.ComponentContainer
 import org.burningwave.core.classes.SearchConfig
-import org.burningwave.core.io.{FileSystemItem, PathHelper}
+import org.burningwave.core.io.FileSystemItem
 
 import scala.jdk.CollectionConverters.*
+import scala.util.Using
 
 /**
  * Program running rule ShowTypeUsage.
+ *
+ * TODO Rename
  *
  * @author
  *   Chris de Vreeze
@@ -44,8 +47,10 @@ object ShowTypeUsageRunner:
 
     val classUniverse: Seq[Class[_]] = findClassesToInspect(packageNameFilters)
 
-    val ruleResult: Json = ShowTypeUsage(classesToFind, classUniverse).run()
-    println(ruleResult)
+    val classFunction = FindUsagesOfType(classesToFind)
+    val jsons: Seq[Json] = classUniverse.map(cls => classFunction(cls))
+    val result: Json = Json.fromValues(jsons)
+    println(result)
   end main
 
   private def findClassesToInspect(packageNameFilters: Set[String]): Seq[Class[_]] =
@@ -55,19 +60,17 @@ object ShowTypeUsageRunner:
 
     val searchConfig = SearchConfig
       .forPaths(
-        pathHelper.getAllMainClassPaths,
-        pathHelper.getPaths(PathHelper.Configuration.Key.MAIN_CLASS_REPOSITORIES)
+        pathHelper.getAllMainClassPaths
       )
       .addFileFilter(
         FileSystemItem.Criteria.forAllFileThat { fileSystemItem =>
           Option(fileSystemItem.toJavaClass)
             .flatMap(cls => Option(cls.getPackageName))
-            .filter(pkgName => packageNameFilters.exists(f => pkgName.contains(f)))
-            .nonEmpty
+            .exists(pkgName => packageNameFilters.exists(f => pkgName.contains(f)))
         }
       )
 
-    classHunter.findBy(searchConfig).getClasses.asScala.toList
+    Using.resource(classHunter.findBy(searchConfig))(_.getClasses.asScala.toList)
   end findClassesToInspect
 
 end ShowTypeUsageRunner

@@ -16,14 +16,10 @@
 
 package eu.cdevreeze.tryreflection.introspection
 
-import io.circe.Json
-
 /**
- * Introspection rule.
+ * Function taking a Class instance as input.
  *
  * @author
  *   Chris de Vreeze
  */
-trait Rule:
-
-  def run(): Json
+trait ClassFunction[A] extends Function[Class[_], A]

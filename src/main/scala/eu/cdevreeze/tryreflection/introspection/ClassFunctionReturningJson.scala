@@ -16,10 +16,12 @@
 
 package eu.cdevreeze.tryreflection.introspection
 
+import io.circe.Json
+
 /**
- * Introspection rule iterating over a "class universe", typically populated from the classpath.
+ * Function from a Class instance to Json.
  *
  * @author
  *   Chris de Vreeze
  */
-trait ClassUniverseRule(val classUniverse: Seq[Class[_]]) extends Rule
+trait ClassFunctionReturningJson extends ClassFunction[Json]

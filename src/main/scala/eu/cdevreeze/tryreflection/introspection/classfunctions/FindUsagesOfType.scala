@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.tryreflection.introspection.rules
+package eu.cdevreeze.tryreflection.introspection.classfunctions
 
-import eu.cdevreeze.tryreflection.introspection.ClassUniverseRule
+import eu.cdevreeze.tryreflection.introspection.ClassFunctionReturningJson
 import io.circe.Json
 
 /**
- * Rule that iterates over the "class universe", searching for usage of the given types, in class/interface names, names of superclass or
- * implemented interfaces, method signatures, constructor signatures, field types, etc.
+ * Class function searching for usage of the given types, in class/interface names, names of superclass or implemented interfaces, method
+ * signatures, constructor signatures, field types, etc.
  *
  * @author
  *   Chris de Vreeze
  */
-final class ShowTypeUsage(val classes: Seq[Class[_]], classUniverse: Seq[Class[_]]) extends ClassUniverseRule(classUniverse):
+final class FindUsagesOfType(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson:
 
-  def run(): Json =
+  def apply(clazz: Class[_]): Json =
     val results: Seq[Json] =
       for {
-        classToInspect <- classUniverse
-        classToFind <- classes
-      } yield run(classToFind, classToInspect)
+        classToFind <- classesToFind
+      } yield run(classToFind, clazz)
     Json.fromValues(results)
 
   def run(classToFind: Class[_], classToInspect: Class[_]): Json =
@@ -43,14 +42,14 @@ final class ShowTypeUsage(val classes: Seq[Class[_]], classUniverse: Seq[Class[_
     val fields = classToInspect.getDeclaredFields().toSeq
     val methods = classToInspect.getDeclaredMethods().toSeq
 
-    val classMatches = classesMatch(classToFind, classToInspect)
-    val superclassMatches = superclassOption.exists(cls => classesMatch(classToFind, cls))
-    val matchingInterfaces = interfaces.filter(itf => classesMatch(classToFind, itf))
-    val matchingConstructors = constructors.filter(_.getParameterTypes().exists(c => classesMatch(classToFind, c)))
-    val matchingFields = fields.filter(fld => classesMatch(classToFind, fld.getType()))
+    val classMatches = areEqual(classToFind, classToInspect)
+    val superclassMatches = superclassOption.exists(cls => areEqual(classToFind, cls))
+    val matchingInterfaces = interfaces.filter(itf => areEqual(classToFind, itf))
+    val matchingConstructors = constructors.filter(_.getParameterTypes().exists(c => areEqual(classToFind, c)))
+    val matchingFields = fields.filter(fld => areEqual(classToFind, fld.getType()))
     val matchingMethods = methods.filter { method =>
-      method.getParameterTypes().exists(c => classesMatch(classToFind, c)) ||
-      classesMatch(classToFind, method.getReturnType())
+      method.getParameterTypes().exists(c => areEqual(classToFind, c)) ||
+      areEqual(classToFind, method.getReturnType())
     }
 
     if classMatches || superclassMatches || matchingInterfaces.nonEmpty ||
@@ -73,7 +72,7 @@ final class ShowTypeUsage(val classes: Seq[Class[_]], classUniverse: Seq[Class[_
       )
   end run
 
-  private def classesMatch(class1: Class[_], class2: Class[_]): Boolean =
+  private def areEqual(class1: Class[_], class2: Class[_]): Boolean =
     class1.isAssignableFrom(class2) && class2.isAssignableFrom(class1)
 
-end ShowTypeUsage
+end FindUsagesOfType
