@@ -16,7 +16,7 @@
 
 package eu.cdevreeze.tryreflection.introspection.classfunctions
 
-import eu.cdevreeze.tryreflection.introspection.ClassFunctionReturningJson
+import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunctionReturningJson}
 import io.circe.Json
 
 import java.lang.reflect.{ParameterizedType, Type}
@@ -27,7 +27,7 @@ import java.lang.reflect.{ParameterizedType, Type}
  * @author
  *   Chris de Vreeze
  */
-object GetSupertypes extends ClassFunctionReturningJson:
+final class GetSupertypes() extends ClassFunctionReturningJson:
 
   def apply(clazz: Class[_]): Json =
     val superclasses: Seq[Type] = findSuperclasses(clazz)
@@ -61,5 +61,9 @@ object GetSupertypes extends ClassFunctionReturningJson:
       case cls: Class[_]            => Option(cls)
       case ptype: ParameterizedType => Option(ptype.getRawType).collect { case cls: Class[_] => cls }
       case _                        => None
+
+object GetSupertypes extends ClassFunctionFactory[Json, GetSupertypes]:
+
+  def create(configJson: Json): GetSupertypes = GetSupertypes()
 
 end GetSupertypes

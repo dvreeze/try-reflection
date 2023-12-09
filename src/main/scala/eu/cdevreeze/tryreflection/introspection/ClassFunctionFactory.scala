@@ -14,23 +14,16 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.tryreflection.console
+package eu.cdevreeze.tryreflection.introspection
 
-import eu.cdevreeze.tryreflection.introspection.classfunctions.GetSupertypes
 import io.circe.Json
 
 /**
- * Program repeatedly running ClassFunction GetSupertypes.
- *
- * TODO Rename
+ * ClassFunction factory.
  *
  * @author
  *   Chris de Vreeze
  */
-object ShowSupertypesRunner:
+trait ClassFunctionFactory[A, F <: ClassFunction[A]]:
 
-  def main(args: Array[String]): Unit =
-    val classes: Seq[Class[_]] = args.toSeq.map(Class.forName)
-    val jsons: Seq[Json] = classes.map(cls => GetSupertypes(cls))
-    val result: Json = Json.fromValues(jsons)
-    println(result)
+  def create(configJson: Json): F

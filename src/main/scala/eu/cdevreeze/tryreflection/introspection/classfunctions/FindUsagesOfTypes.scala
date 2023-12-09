@@ -16,8 +16,9 @@
 
 package eu.cdevreeze.tryreflection.introspection.classfunctions
 
-import eu.cdevreeze.tryreflection.introspection.ClassFunctionReturningJson
-import io.circe.Json
+import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunctionReturningJson}
+import io.circe.{Decoder, Json}
+import io.circe.generic.semiauto.*
 
 /**
  * Class function searching for usage of the given types, in class/interface names, names of superclass or implemented interfaces, method
@@ -74,5 +75,16 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
 
   private def areEqual(class1: Class[_], class2: Class[_]): Boolean =
     class1.isAssignableFrom(class2) && class2.isAssignableFrom(class1)
+
+object FindUsagesOfTypes extends ClassFunctionFactory[Json, FindUsagesOfTypes]:
+
+  final case class Config(classesToFind: Seq[String])
+
+  private given Decoder[Config] = deriveDecoder[Config]
+
+  def create(configJson: Json): FindUsagesOfTypes =
+    val config: Config = configJson.as[Config].toOption.get
+    val classesToFind: Seq[Class[_]] = config.classesToFind.map(Class.forName)
+    FindUsagesOfTypes(classesToFind)
 
 end FindUsagesOfTypes
