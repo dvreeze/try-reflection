@@ -1,7 +1,8 @@
 {
-  "name": "GetSupertypes-zio",
-  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.GetSupertypes$",
+  "name": "FindUsagesOfTypes-zio",
+  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.FindUsagesOfTypes$",
   "classFunctionFactoryJsonInput": {
+    "classesToFind": [ "scala.util.Try", "scala.util.Try$" ]
   },
   "additionalClassPath": [
     "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.0.19/zio_3-2.0.19.jar",
@@ -12,5 +13,6 @@
     "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.10/scala-library-2.13.10.jar",
     "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect-thirdparty-boopickle-shaded_3/2.3.8/izumi-reflect-thirdparty-boopickle-shaded_3-2.3.8.jar"
   ],
-  "inputClassNames": [ "zio.ZIO", "zio.ZEnvironment", "zio.ZLayer", "zio.Clock", "zio.FiberId" ]
+  "packagePaths": [ "zio" ],
+  "excludedPackagePaths": [ "izumi/reflect/", "zio/internal/" ]
 }

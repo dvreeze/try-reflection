@@ -20,6 +20,8 @@ import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunc
 import io.circe.{Decoder, Json}
 import io.circe.generic.semiauto.*
 
+import scala.util.Try
+
 /**
  * Class function searching for usage of the given types, in class/interface names, names of superclass or implemented interfaces, method
  * signatures, constructor signatures, field types, etc.
@@ -37,40 +39,47 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
     Json.fromValues(results)
 
   private def findClass(classToFind: Class[_], classToInspect: Class[_]): Json =
-    val superclassOption = Option(classToInspect.getSuperclass())
-    val interfaces = classToInspect.getInterfaces().toSeq
-    val constructors = classToInspect.getDeclaredConstructors()
-    val fields = classToInspect.getDeclaredFields().toSeq
-    val methods = classToInspect.getDeclaredMethods().toSeq
+    Try {
+      val superclassOption = Option(classToInspect.getSuperclass())
+      val interfaces = classToInspect.getInterfaces().toSeq
+      val constructors = classToInspect.getDeclaredConstructors()
+      val fields = classToInspect.getDeclaredFields().toSeq
+      val methods = classToInspect.getDeclaredMethods().toSeq
 
-    val classMatches = areEqual(classToFind, classToInspect)
-    val superclassMatches = superclassOption.exists(cls => areEqual(classToFind, cls))
-    val matchingInterfaces = interfaces.filter(itf => areEqual(classToFind, itf))
-    val matchingConstructors = constructors.filter(_.getParameterTypes().exists(c => areEqual(classToFind, c)))
-    val matchingFields = fields.filter(fld => areEqual(classToFind, fld.getType()))
-    val matchingMethods = methods.filter { method =>
-      method.getParameterTypes().exists(c => areEqual(classToFind, c)) ||
-      areEqual(classToFind, method.getReturnType())
-    }
+      val classMatches = areEqual(classToFind, classToInspect)
+      val superclassMatches = superclassOption.exists(cls => areEqual(classToFind, cls))
+      val matchingInterfaces = interfaces.filter(itf => areEqual(classToFind, itf))
+      val matchingConstructors = constructors.filter(_.getParameterTypes().exists(c => areEqual(classToFind, c)))
+      val matchingFields = fields.filter(fld => areEqual(classToFind, fld.getType()))
+      val matchingMethods = methods.filter { method =>
+        method.getParameterTypes().exists(c => areEqual(classToFind, c)) ||
+        areEqual(classToFind, method.getReturnType())
+      }
 
-    if classMatches || superclassMatches || matchingInterfaces.nonEmpty ||
-      matchingConstructors.nonEmpty || matchingFields.nonEmpty || matchingMethods.nonEmpty
-    then
+      if classMatches || superclassMatches || matchingInterfaces.nonEmpty ||
+        matchingConstructors.nonEmpty || matchingFields.nonEmpty || matchingMethods.nonEmpty
+      then
+        Json.obj(
+          "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
+          "classToFind" -> Json.fromString(classToFind.getTypeName),
+          "classNameMatches" -> Json.fromBoolean(classMatches),
+          "superclassMatches" -> Json.fromBoolean(superclassMatches),
+          "matchingInterfaces" -> Json.arr(matchingInterfaces.map(c => Json.fromString(c.toString)): _*),
+          "matchingConstructors" -> Json.fromBoolean(matchingConstructors.nonEmpty),
+          "matchingFields" -> Json.arr(matchingFields.map(f => Json.fromString(f.getName)): _*),
+          "matchingMethods" -> Json.arr(matchingMethods.map(m => Json.fromString(m.getName)): _*)
+        )
+      else
+        Json.obj(
+          "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
+          "classToFind" -> Json.fromString(classToFind.getTypeName)
+        )
+    }.recover { case t: Throwable =>
       Json.obj(
-        "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
-        "classToFind" -> Json.fromString(classToFind.getTypeName),
-        "classNameMatches" -> Json.fromBoolean(classMatches),
-        "superclassMatches" -> Json.fromBoolean(superclassMatches),
-        "matchingInterfaces" -> Json.arr(matchingInterfaces.map(c => Json.fromString(c.toString)): _*),
-        "matchingConstructors" -> Json.fromBoolean(matchingConstructors.nonEmpty),
-        "matchingFields" -> Json.arr(matchingFields.map(f => Json.fromString(f.getName)): _*),
-        "matchingMethods" -> Json.arr(matchingMethods.map(m => Json.fromString(m.getName)): _*)
+        "exceptionThrown" -> Json.fromString(t.toString)
       )
-    else
-      Json.obj(
-        "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
-        "classToFind" -> Json.fromString(classToFind.getTypeName)
-      )
+    }.toOption
+      .get
   end findClass
 
   private def areEqual(class1: Class[_], class2: Class[_]): Boolean =

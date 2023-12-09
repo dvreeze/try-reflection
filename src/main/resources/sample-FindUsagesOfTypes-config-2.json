@@ -1,7 +1,8 @@
 {
-  "name": "GetSupertypes-zio",
-  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.GetSupertypes$",
+  "name": "FindUsagesOfTypes-zio-2",
+  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.FindUsagesOfTypes$",
   "classFunctionFactoryJsonInput": {
+    "classesToFind": [ "scala.util.Try", "scala.util.Try$" ]
   },
   "additionalClassPath": [
     "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.0.19/zio_3-2.0.19.jar",

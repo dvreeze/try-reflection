@@ -35,6 +35,9 @@ import scala.util.chaining.scalaUtilChainingOps
 /**
  * ClassFunction runner.
  *
+ * TODO Create 2 programs, where one program calls another one in a forked process TODO The second program does the work, with the classpath
+ * coming from the first process
+ *
  * @author
  *   Chris de Vreeze
  */
