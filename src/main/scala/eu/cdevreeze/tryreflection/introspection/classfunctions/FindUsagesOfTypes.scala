@@ -36,7 +36,9 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       (for {
         classToFind <- classesToFind
       } yield findClass(classToFind, clazz)).flatten
-    Json.fromValues(results)
+
+    if results.isEmpty then Json.arr(Json.obj("inspectedClass" -> Json.fromString(clazz.getTypeName)))
+    else Json.fromValues(results)
 
   private def findClass(classToFind: Class[_], classToInspect: Class[_]): Option[Json] =
     Try {
