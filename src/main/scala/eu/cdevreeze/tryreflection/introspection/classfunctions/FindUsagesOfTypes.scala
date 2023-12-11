@@ -77,6 +77,7 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
           Json.obj(
             "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
             "classToFind" -> Json.fromString(classToFind.getTypeName),
+            "superclass" -> superclassOption.map(c => Json.fromString(c.getTypeName)).getOrElse(Json.Null),
             "classNameMatches" -> Json.fromBoolean(classMatches),
             "superclassMatches" -> Json.fromBoolean(superclassMatches),
             "matchingInterfaces" -> Json.arr(matchingInterfaces.map(c => Json.fromString(c.toString)): _*),
