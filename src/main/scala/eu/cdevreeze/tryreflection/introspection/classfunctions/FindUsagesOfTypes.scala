@@ -33,12 +33,12 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
 
   def apply(clazz: Class[_]): Json =
     val results: Seq[Json] =
-      for {
+      (for {
         classToFind <- classesToFind
-      } yield findClass(classToFind, clazz)
+      } yield findClass(classToFind, clazz)).flatten
     Json.fromValues(results)
 
-  private def findClass(classToFind: Class[_], classToInspect: Class[_]): Json =
+  private def findClass(classToFind: Class[_], classToInspect: Class[_]): Option[Json] =
     Try {
       val superclassOption = Option(classToInspect.getSuperclass())
       val interfaces = classToInspect.getInterfaces().toSeq
@@ -56,27 +56,43 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
         areEqual(classToFind, method.getReturnType())
       }
 
+      val classAnnotations = classToInspect.getDeclaredAnnotations().toSeq
+      val constructorAnnotations = constructors.flatMap(_.getDeclaredAnnotations().toSeq)
+      val fieldAnnotations = fields.flatMap(_.getDeclaredAnnotations().toSeq)
+      val methodAnnotations = methods.flatMap(_.getDeclaredAnnotations().toSeq)
+
+      val matchingClassAnnotations = classAnnotations.filter(a => areEqual(classToFind, a.annotationType()))
+      val matchingConstructorAnnotations = constructorAnnotations.filter(a => areEqual(classToFind, a.annotationType()))
+      val matchingFieldAnnotations = fieldAnnotations.filter(a => areEqual(classToFind, a.annotationType()))
+      val matchingMethodAnnotations = methodAnnotations.filter(a => areEqual(classToFind, a.annotationType()))
+
       if classMatches || superclassMatches || matchingInterfaces.nonEmpty ||
-        matchingConstructors.nonEmpty || matchingFields.nonEmpty || matchingMethods.nonEmpty
+        matchingConstructors.nonEmpty || matchingFields.nonEmpty || matchingMethods.nonEmpty ||
+        matchingClassAnnotations.nonEmpty || matchingConstructorAnnotations.nonEmpty ||
+        matchingFieldAnnotations.nonEmpty || matchingMethodAnnotations.nonEmpty
       then
-        Json.obj(
-          "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
-          "classToFind" -> Json.fromString(classToFind.getTypeName),
-          "classNameMatches" -> Json.fromBoolean(classMatches),
-          "superclassMatches" -> Json.fromBoolean(superclassMatches),
-          "matchingInterfaces" -> Json.arr(matchingInterfaces.map(c => Json.fromString(c.toString)): _*),
-          "matchingConstructors" -> Json.fromBoolean(matchingConstructors.nonEmpty),
-          "matchingFields" -> Json.arr(matchingFields.map(f => Json.fromString(f.getName)): _*),
-          "matchingMethods" -> Json.arr(matchingMethods.map(m => Json.fromString(m.getName)): _*)
+        Some(
+          Json.obj(
+            "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
+            "classToFind" -> Json.fromString(classToFind.getTypeName),
+            "classNameMatches" -> Json.fromBoolean(classMatches),
+            "superclassMatches" -> Json.fromBoolean(superclassMatches),
+            "matchingInterfaces" -> Json.arr(matchingInterfaces.map(c => Json.fromString(c.toString)): _*),
+            "matchingConstructors" -> Json.fromBoolean(matchingConstructors.nonEmpty),
+            "matchingFields" -> Json.arr(matchingFields.map(f => Json.fromString(f.getName)): _*),
+            "matchingMethods" -> Json.arr(matchingMethods.map(m => Json.fromString(m.getName)): _*),
+            "matchingClassAnnotations" -> Json.arr(matchingClassAnnotations.map(a => Json.fromString(a.toString)): _*),
+            "matchingConstructorAnnotations" -> Json.arr(matchingConstructorAnnotations.map(a => Json.fromString(a.toString)): _*),
+            "matchingFieldAnnotations" -> Json.arr(matchingFieldAnnotations.map(a => Json.fromString(a.toString)): _*),
+            "matchingMethodAnnotations" -> Json.arr(matchingMethodAnnotations.map(a => Json.fromString(a.toString)): _*)
+          )
         )
-      else
-        Json.obj(
-          "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
-          "classToFind" -> Json.fromString(classToFind.getTypeName)
-        )
+      else None
     }.recover { case t: Throwable =>
-      Json.obj(
-        "exceptionThrown" -> Json.fromString(t.toString)
+      Some(
+        Json.obj(
+          "exceptionThrown" -> Json.fromString(t.toString)
+        )
       )
     }.toOption
       .get
@@ -93,7 +109,7 @@ object FindUsagesOfTypes extends ClassFunctionFactory[Json, FindUsagesOfTypes]:
 
   def create(configJson: Json): FindUsagesOfTypes =
     val config: Config = configJson.as[Config].toOption.get
-    val classesToFind: Seq[Class[_]] = config.classesToFind.map(Class.forName)
+    val classesToFind: Seq[Class[_]] = config.classesToFind.flatMap(c => Try(Class.forName(c)).toOption)
     FindUsagesOfTypes(classesToFind)
 
 end FindUsagesOfTypes
