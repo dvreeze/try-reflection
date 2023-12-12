@@ -44,7 +44,8 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
       classFunctionFactoryJsonInput: Json,
       additionalClassPath: Seq[String], // Ignored here
       packagePaths: Set[String], // Sub-packages will also be iterated over
-      excludedPackagePaths: Set[String]
+      excludedPackagePaths: Set[String],
+      searchPathsWithinClassPath: Seq[String]
   )
 
   private given Encoder[Config] = deriveEncoder[Config]
@@ -93,7 +94,7 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
 
     val searchConfigForInputClasses = SearchConfig
       .forPaths(
-        pathHelper.getAllMainClassPaths
+        if config.searchPathsWithinClassPath.isEmpty then pathHelper.getAllMainClassPaths else config.searchPathsWithinClassPath.asJava
       )
       .addFileFilter(
         FileSystemItem.Criteria.forAllFileThat { fileSystemItem =>

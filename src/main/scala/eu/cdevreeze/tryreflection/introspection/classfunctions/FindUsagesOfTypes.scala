@@ -32,8 +32,6 @@ import scala.util.Try
 final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson:
 
   // TODO One JSON per inspected class (skipping it if no usages of given types found)
-  // TODO Find also inherited types of given types
-  // TODO Search only relevant part of classpath (requires extra global config field?)
 
   def apply(clazz: Class[_]): Json =
     val results: Seq[Json] =
@@ -52,14 +50,14 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       val fields = classToInspect.getDeclaredFields().toSeq
       val methods = classToInspect.getDeclaredMethods().toSeq
 
-      val classMatches = areEqual(classToFind, classToInspect)
-      val superclassMatches = superclassOption.exists(cls => areEqual(classToFind, cls))
-      val matchingInterfaces = interfaces.filter(itf => areEqual(classToFind, itf))
-      val matchingConstructors = constructors.filter(_.getParameterTypes().exists(c => areEqual(classToFind, c)))
-      val matchingFields = fields.filter(fld => areEqual(classToFind, fld.getType()))
+      val classMatches = classToFind.isAssignableFrom(classToInspect)
+      val superclassMatches = superclassOption.exists(cls => classToFind.isAssignableFrom(cls))
+      val matchingInterfaces = interfaces.filter(itf => classToFind.isAssignableFrom(itf))
+      val matchingConstructors = constructors.filter(_.getParameterTypes().exists(c => classToFind.isAssignableFrom(c)))
+      val matchingFields = fields.filter(fld => classToFind.isAssignableFrom(fld.getType()))
       val matchingMethods = methods.filter { method =>
-        method.getParameterTypes().exists(c => areEqual(classToFind, c)) ||
-        areEqual(classToFind, method.getReturnType())
+        method.getParameterTypes().exists(c => classToFind.isAssignableFrom(c)) ||
+        classToFind.isAssignableFrom(method.getReturnType())
       }
 
       val classAnnotations = classToInspect.getDeclaredAnnotations().toSeq
@@ -67,10 +65,10 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       val fieldAnnotations = fields.flatMap(_.getDeclaredAnnotations().toSeq)
       val methodAnnotations = methods.flatMap(_.getDeclaredAnnotations().toSeq)
 
-      val matchingClassAnnotations = classAnnotations.filter(a => areEqual(classToFind, a.annotationType()))
-      val matchingConstructorAnnotations = constructorAnnotations.filter(a => areEqual(classToFind, a.annotationType()))
-      val matchingFieldAnnotations = fieldAnnotations.filter(a => areEqual(classToFind, a.annotationType()))
-      val matchingMethodAnnotations = methodAnnotations.filter(a => areEqual(classToFind, a.annotationType()))
+      val matchingClassAnnotations = classAnnotations.filter(a => classToFind.isAssignableFrom(a.annotationType()))
+      val matchingConstructorAnnotations = constructorAnnotations.filter(a => classToFind.isAssignableFrom(a.annotationType()))
+      val matchingFieldAnnotations = fieldAnnotations.filter(a => classToFind.isAssignableFrom(a.annotationType()))
+      val matchingMethodAnnotations = methodAnnotations.filter(a => classToFind.isAssignableFrom(a.annotationType()))
 
       if classMatches || superclassMatches || matchingInterfaces.nonEmpty ||
         matchingConstructors.nonEmpty || matchingFields.nonEmpty || matchingMethods.nonEmpty ||
@@ -104,9 +102,6 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
     }.toOption
       .get
   end findClass
-
-  private def areEqual(class1: Class[_], class2: Class[_]): Boolean =
-    class1.isAssignableFrom(class2) && class2.isAssignableFrom(class1)
 
 object FindUsagesOfTypes extends ClassFunctionFactory[Json, FindUsagesOfTypes]:
 
