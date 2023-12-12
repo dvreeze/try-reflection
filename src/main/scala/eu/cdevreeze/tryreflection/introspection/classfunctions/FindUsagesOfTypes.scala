@@ -31,6 +31,10 @@ import scala.util.Try
  */
 final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson:
 
+  // TODO One JSON per inspected class (skipping it if no usages of given types found)
+  // TODO Find also inherited types of given types
+  // TODO Search only relevant part of classpath (requires extra global config field?)
+
   def apply(clazz: Class[_]): Json =
     val results: Seq[Json] =
       (for {

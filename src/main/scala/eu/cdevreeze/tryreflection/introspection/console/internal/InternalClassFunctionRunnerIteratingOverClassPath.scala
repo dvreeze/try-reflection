@@ -29,14 +29,14 @@ import scala.util.{Try, Using}
 import scala.util.chaining.scalaUtilChainingOps
 
 /**
- * Internal ClassFunctionRunningIteratingOverClassPath runner, called as program in a different OS process from
- * ClassFunctionRunningIteratingOverClassPath. The calling program makes sure this program runs with the correct classpath. Having the
+ * Internal ClassFunctionRunnerIteratingOverClassPath runner, called as program in a different OS process from
+ * ClassFunctionRunnerIteratingOverClassPath. The calling program makes sure this program runs with the correct classpath. Having the
  * correct classpath, this program does all the work of running a ClassFunction on given parts of the classpath.
  *
  * @author
  *   Chris de Vreeze
  */
-object InternalClassFunctionRunningIteratingOverClassPath:
+object InternalClassFunctionRunnerIteratingOverClassPath:
 
   final case class Config(
       name: String,
@@ -133,4 +133,4 @@ object InternalClassFunctionRunningIteratingOverClassPath:
     classNameWithoutExtension.stripSuffix("$").contains("$") ||
     classNameWithoutExtension.contains("package")
 
-end InternalClassFunctionRunningIteratingOverClassPath
+end InternalClassFunctionRunnerIteratingOverClassPath

@@ -68,7 +68,10 @@ object InternalSimpleClassFunctionRunner:
   def main(args: Array[String]): Unit =
     val configJsonPath: String =
       args
-        .ensuring(_.nonEmpty, s"Usage: InternalSimpleClassFunctionRunner <JSON file resource path> (e.g. sample-FindUsagesOfTypes-config.json)")
+        .ensuring(
+          _.nonEmpty,
+          s"Usage: InternalSimpleClassFunctionRunner <JSON file resource path> (e.g. sample-FindUsagesOfTypes-config.json)"
+        )
         .head
 
     val componentSupplier: ComponentSupplier = ComponentContainer.getInstance()
