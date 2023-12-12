@@ -123,7 +123,7 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
         val classFunction: ClassFunctionReturningJson = factory.create(factoryInput)
 
         val clazzes: Seq[Class[_]] = searchResult.getClasses.asScala.toList
-        Json.fromValues(clazzes.flatMap(cls => Try(classFunction(cls)).toOption))
+        Json.fromValues(clazzes.flatMap(cls => Try(classFunction(cls)).toOption.filterNot(_ == Json.obj())))
       }
 
     println(jsonResult)

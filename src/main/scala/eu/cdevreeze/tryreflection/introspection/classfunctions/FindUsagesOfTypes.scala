@@ -31,16 +31,23 @@ import scala.util.Try
  */
 final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson:
 
-  // TODO One JSON per inspected class (skipping it if no usages of given types found)
-
   def apply(clazz: Class[_]): Json =
-    val results: Seq[Json] =
-      (for {
-        classToFind <- classesToFind
-      } yield findClass(classToFind, clazz)).flatten
+    findClasses(classesToFind, clazz).getOrElse(Json.obj())
 
-    if results.isEmpty then Json.arr(Json.obj("inspectedClass" -> Json.fromString(clazz.getTypeName)))
-    else Json.fromValues(results)
+  private def findClasses(classesToFind: Seq[Class[_]], classToInspect: Class[_]): Option[Json] =
+    val superclassOption = Option(classToInspect.getSuperclass())
+
+    val jsonsForFoundClasses: Seq[Json] = classesToFind.flatMap(cls => findClass(cls, classToInspect))
+
+    if jsonsForFoundClasses.isEmpty then None
+    else
+      Some(
+        Json.obj(
+          "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
+          "superclass" -> superclassOption.map(c => Json.fromString(c.getTypeName)).getOrElse(Json.Null),
+          "foundTypeUsages" -> Json.fromValues(jsonsForFoundClasses)
+        )
+      )
 
   private def findClass(classToFind: Class[_], classToInspect: Class[_]): Option[Json] =
     Try {
@@ -77,9 +84,7 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       then
         Some(
           Json.obj(
-            "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
             "classToFind" -> Json.fromString(classToFind.getTypeName),
-            "superclass" -> superclassOption.map(c => Json.fromString(c.getTypeName)).getOrElse(Json.Null),
             "classNameMatches" -> Json.fromBoolean(classMatches),
             "superclassMatches" -> Json.fromBoolean(superclassMatches),
             "matchingInterfaces" -> Json.arr(matchingInterfaces.map(c => Json.fromString(c.toString)): _*),
