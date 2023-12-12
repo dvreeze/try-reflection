@@ -45,7 +45,7 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
       additionalClassPath: Seq[String], // Ignored here
       packagePaths: Set[String], // Sub-packages will also be iterated over
       excludedPackagePaths: Set[String],
-      searchPathsWithinClassPath: Seq[String]
+      searchPathsWithinClassPath: Seq[String] // May be partial, such as just a JAR file name without path
   )
 
   private given Encoder[Config] = deriveEncoder[Config]
@@ -92,10 +92,12 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
         .getOrElse(sys.error(s"Could not interpret the JSON program input as Config"))
     val configResolver = ConfigResolver(config)
 
+    val searchPaths: java.util.Collection[String] =
+      if config.searchPathsWithinClassPath.isEmpty then pathHelper.getAllMainClassPaths
+      else pathHelper.getPaths(p => config.searchPathsWithinClassPath.exists(cfgPath => p.contains(cfgPath)))
+
     val searchConfigForInputClasses = SearchConfig
-      .forPaths(
-        if config.searchPathsWithinClassPath.isEmpty then pathHelper.getAllMainClassPaths else config.searchPathsWithinClassPath.asJava
-      )
+      .forPaths(searchPaths)
       .addFileFilter(
         FileSystemItem.Criteria.forAllFileThat { fileSystemItem =>
           val javaClassOption = Option(fileSystemItem.toJavaClass).filterNot(skipClass)
@@ -123,7 +125,11 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
         val classFunction: ClassFunctionReturningJson = factory.create(factoryInput)
 
         val clazzes: Seq[Class[_]] = searchResult.getClasses.asScala.toList
-        Json.fromValues(clazzes.flatMap(cls => Try(classFunction(cls)).toOption.filterNot(_ == Json.obj())))
+
+        def getOptionalFunctionResult(cls: Class[_]): Option[Json] =
+          Try(classFunction(cls)).toOption.filterNot(_ == Json.obj())
+
+        Json.fromValues(clazzes.flatMap(getOptionalFunctionResult))
       }
 
     println(jsonResult)
