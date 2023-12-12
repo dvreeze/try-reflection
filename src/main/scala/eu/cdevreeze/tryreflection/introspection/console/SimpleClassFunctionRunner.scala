@@ -16,27 +16,21 @@
 
 package eu.cdevreeze.tryreflection.introspection.console
 
-import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunctionReturningJson}
 import io.circe.{Decoder, Encoder, Json, parser}
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.generic.semiauto.deriveEncoder
 import io.circe.parser.parse
 import org.burningwave.core.assembler.{ComponentContainer, ComponentSupplier}
-import org.burningwave.core.classes.{ClassCriteria, ClassHunter, PathScannerClassLoader, SearchConfig}
 import org.burningwave.core.io.PathHelper
 
 import java.nio.file.{Files, Path}
-import java.util.Properties
 import scala.jdk.CollectionConverters.*
-import scala.util.Try
-import scala.util.Using
 import scala.util.chaining.scalaUtilChainingOps
 
 /**
  * ClassFunction runner.
  *
- * TODO Create 2 programs, where one program calls another one in a forked process TODO The second program does the work, with the classpath
- * coming from the first process
+ * It forks program InternalSimpleClassFunctionRunner in a different OS process, enhancing its classpath.
  *
  * @author
  *   Chris de Vreeze
@@ -54,30 +48,15 @@ object SimpleClassFunctionRunner:
   private given Encoder[Config] = deriveEncoder[Config]
   private given Decoder[Config] = deriveDecoder[Config]
 
-  final case class ConfigResolver(config: Config):
-    def resolveClassFunctionFactoryClass(classHunter: ClassHunter): Class[ClassFunctionFactory[Json, _ <: ClassFunctionReturningJson]] =
-      val searchConfig = SearchConfig.byCriteria(
-        ClassCriteria.create().className(_ == config.classFunctionFactoryClass)
-      )
-      Using.resource(classHunter.findBy(searchConfig)) { searchResult =>
-        searchResult.getClasses
-          .ensuring(_.size == 1, s"Expected exactly 1 '${config.classFunctionFactoryClass}' but got ${searchResult.getClasses.size} ones")
-          .stream()
-          .findFirst()
-          .ensuring(_.isPresent)
-          .get()
-          .asInstanceOf[Class[ClassFunctionFactory[Json, _ <: ClassFunctionReturningJson]]]
-      }
-
   def main(args: Array[String]): Unit =
     val configJsonPath: String =
       args.ensuring(_.nonEmpty, s"Usage: SimpleClassFunctionRunner <JSON file resource path> (e.g. sample-GetSupertypes-config.json)").head
 
-    val defaultComponentSupplier: ComponentSupplier = ComponentContainer.getInstance()
-    val defaultPathHelper: PathHelper = defaultComponentSupplier.getPathHelper()
+    val componentSupplier: ComponentSupplier = ComponentContainer.getInstance()
+    val pathHelper: PathHelper = componentSupplier.getPathHelper()
 
     val config: Config =
-      defaultPathHelper
+      pathHelper
         .getResource(configJsonPath)
         .pipe(_.getAbsolutePath)
         .pipe(path => Path.of(path))
@@ -86,53 +65,23 @@ object SimpleClassFunctionRunner:
         .toOption
         .flatMap(_.as[Config].toOption)
         .getOrElse(sys.error(s"Could not interpret the JSON program input as Config"))
-    val configResolver = ConfigResolver(config)
 
-    // The classpath of the code to inspect, which is "added" to the main classpath
-    val additionalClassPath: Seq[String] = config.additionalClassPath.filter(_.trim.nonEmpty).ensuring(_.nonEmpty)
+    // See https://www.baeldung.com/java-lang-processbuilder-api and https://www.baeldung.com/java-9-process-api
 
-    val additionalClassPathsKeyAsPath = "java-memory-compiler.additional-class-paths"
-    val additionalClassPathsKey = PathHelper.Configuration.Key.PATHS_PREFIX + additionalClassPathsKeyAsPath
+    // Using pipelines in the ProcessBuilder API:
+    // Call something like "mvn dependency:build-classpath"
+    // Remove unwanted lines
+    // Call "java -cp <cp> InternalSimpleClassFunctionRunner ..." (that program must be found)
+    // Wait for the pipeline to finish, and return its output
 
-    // We are now going to create a new ComponentContainer that uses this additional classpath
+    // If mvn does not exist as a command but mvnw is used instead, just create an alias before running this program.
+    // Of course we could also run "cs fetch --classpath ..." instead if no POM file is encountered in the current directory.
 
-    val configProps = new Properties()
-    configProps.put(additionalClassPathsKey, additionalClassPath.mkString(";")) // Colon does not work
-    val componentSupplier: ComponentSupplier = ComponentContainer.create(configProps)
+    // For "sed", see https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/.
+    // For "awk", see https://www.geeksforgeeks.org/awk-command-unixlinux-examples/.
 
-    val pathScannerClassLoader: PathScannerClassLoader = componentSupplier.getPathScannerClassLoader()
-    val pathHelper: PathHelper = componentSupplier.getPathHelper()
-    val classHunter: ClassHunter = componentSupplier.getClassHunter()
-
-    assert(pathHelper.getPaths(additionalClassPathsKeyAsPath).stream().findFirst().isPresent())
-
-    val searchConfigForInputClasses = SearchConfig
-      .forPaths(
-        pathHelper.getPaths(additionalClassPathsKeyAsPath) // Specifically and only searching here!
-      )
-      .by(
-        ClassCriteria.create().className(cls => config.inputClassNames.contains(cls))
-      )
-
-    val jsonResult: Json =
-      Using.resource(classHunter.findBy(searchConfigForInputClasses)) { searchResult =>
-        val factoryClass = configResolver.resolveClassFunctionFactoryClass(classHunter)
-
-        val factoryInput: Json = config.classFunctionFactoryJsonInput
-
-        val factory: ClassFunctionFactory[Json, ClassFunctionReturningJson] =
-          factoryClass
-            .getField("MODULE$") // Assuming a singleton/companion object
-            .get(null)
-            .asInstanceOf[ClassFunctionFactory[Json, ClassFunctionReturningJson]]
-
-        val classFunction: ClassFunctionReturningJson = factory.create(factoryInput)
-
-        val clazzes: Seq[Class[_]] = searchResult.getClasses.asScala.toList
-        Json.fromValues(clazzes.flatMap(cls => Try(classFunction(cls)).toOption))
-      }
-
-    println(jsonResult)
+    // For running the "java" command with argument files, see https://docs.oracle.com/en/java/javase/17/docs/specs/man/java.html#java-command-line-argument-files.
+    ???
   end main
 
 end SimpleClassFunctionRunner
