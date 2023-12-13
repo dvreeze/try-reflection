@@ -41,7 +41,6 @@ object SimpleClassFunctionRunner:
       name: String,
       classFunctionFactoryClass: String,
       classFunctionFactoryJsonInput: Json,
-      additionalClassPath: Seq[String], // E.g., created with "mvn dependency:build-classpath"
       inputClassNames: Seq[String]
   )
 

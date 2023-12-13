@@ -39,7 +39,6 @@ object ClassFunctionRunnerIteratingOverClassPath:
       name: String,
       classFunctionFactoryClass: String,
       classFunctionFactoryJsonInput: Json,
-      additionalClassPath: Seq[String], // E.g., created with "mvn dependency:build-classpath"
       packagePaths: Set[String], // Sub-packages will also be iterated over
       excludedPackagePaths: Set[String],
       searchPathsWithinClassPath: Seq[String] // May be partial, such as just a JAR file name without path

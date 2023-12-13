@@ -42,7 +42,6 @@ object InternalSimpleClassFunctionRunner:
       name: String,
       classFunctionFactoryClass: String,
       classFunctionFactoryJsonInput: Json,
-      additionalClassPath: Seq[String], // Ignored here
       inputClassNames: Seq[String]
   )
 

@@ -3,12 +3,5 @@
   "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.GetSupertypes$",
   "classFunctionFactoryJsonInput": {
   },
-  "additionalClassPath": [
-    "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.0.19/zio_3-2.0.19.jar",
-    "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-internal-macros_3/2.0.19/zio-internal-macros_3-2.0.19.jar",
-    "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-stacktracer_3/2.0.19/zio-stacktracer_3-2.0.19.jar",
-    "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect_3/2.3.8/izumi-reflect_3-2.3.8.jar",
-    "/home/chris/.cache/coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect-thirdparty-boopickle-shaded_3/2.3.8/izumi-reflect-thirdparty-boopickle-shaded_3-2.3.8.jar"
-  ],
   "inputClassNames": [ "zio.ZIO", "zio.ZEnvironment", "zio.ZLayer", "zio.Clock", "zio.FiberId" ]
 }

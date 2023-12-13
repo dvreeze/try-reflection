@@ -42,7 +42,6 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
       name: String,
       classFunctionFactoryClass: String,
       classFunctionFactoryJsonInput: Json,
-      additionalClassPath: Seq[String], // Ignored here
       packagePaths: Set[String], // Sub-packages will also be iterated over
       excludedPackagePaths: Set[String],
       searchPathsWithinClassPath: Seq[String] // May be partial, such as just a JAR file name without path
