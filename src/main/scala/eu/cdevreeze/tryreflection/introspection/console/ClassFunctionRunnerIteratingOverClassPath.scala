@@ -22,13 +22,17 @@ import org.burningwave.core.assembler.{ComponentContainer, ComponentSupplier}
 import org.burningwave.core.io.PathHelper
 
 import java.nio.file.{Files, Path}
+import scala.io.Source
 import scala.jdk.CollectionConverters.*
+import scala.util.Using
 import scala.util.chaining.scalaUtilChainingOps
 
 /**
- * ClassFunction runner iterating over classes on the classpath.
+ * ClassFunction runner iterating over classes on the classpath. It takes a JSON config file, as well as a class path file.
  *
  * It forks program InternalClassFunctionRunnerIteratingOverClassPath in a different OS process, enhancing its classpath.
+ *
+ * The class path file could come from running command "mvn dependency:build-classpath", or command "cs fetch" on some artifact.
  *
  * @author
  *   Chris de Vreeze
@@ -49,44 +53,80 @@ object ClassFunctionRunnerIteratingOverClassPath:
   private given Decoder[Config] = deriveDecoder[Config]
 
   def main(args: Array[String]): Unit =
-    val configJsonPath: String =
-      args
-        .ensuring(
-          _.nonEmpty,
-          s"Usage: ClassFunctionRunnerIteratingOverClassPath <JSON file resource path> (e.g. sample-FindUsagesOfTypes-config.json)"
-        )
-        .head
+    require(
+      args.sizeIs == 2,
+      s"Usage: ClassFunctionRunnerIteratingOverClassPath <JSON file resource path> <classpath file> "
+    )
+    val configJsonPath: String = args(0)
+    val classPathFilePath: String = args(1)
 
     val componentSupplier: ComponentSupplier = ComponentContainer.getInstance()
     val pathHelper: PathHelper = componentSupplier.getPathHelper()
 
-    val config: Config =
+    val configFile: Path =
       pathHelper
         .getResource(configJsonPath)
         .pipe(_.getAbsolutePath)
         .pipe(path => Path.of(path))
+
+    val config: Config =
+      configFile
         .pipe(path => Files.readString(path))
         .pipe(parser.parse)
         .toOption
         .flatMap(_.as[Config].toOption)
         .getOrElse(sys.error(s"Could not interpret the JSON program input as Config"))
 
-    // See https://www.baeldung.com/java-lang-processbuilder-api and https://www.baeldung.com/java-9-process-api
+    val classPathFile: Path =
+      pathHelper
+        .getResource(classPathFilePath)
+        .pipe(_.getAbsolutePath)
+        .pipe(path => Path.of(path))
 
-    // Using pipelines in the ProcessBuilder API:
-    // Call something like "mvn dependency:build-classpath"
-    // Remove unwanted lines
-    // Call "java -cp <cp> InternalClassFunctionRunnerIteratingOverClassPath ..." (that program must be found)
-    // Wait for the pipeline to finish, and return its output
+    val totalClassPath: String = getCombinedClassPath(classPathFile)
 
-    // If mvn does not exist as a command but mvnw is used instead, just create an alias before running this program.
-    // Of course we could also run "cs fetch --classpath ..." instead if no POM file is encountered in the current directory.
+    val cpFile: Path = Files.createTempFile("classpath-", ".txt")
+    Files.writeString(cpFile, s"-cp $totalClassPath")
 
-    // For "sed", see https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/.
-    // For "awk", see https://www.geeksforgeeks.org/awk-command-unixlinux-examples/.
+    val mainClassName = "eu.cdevreeze.tryreflection.introspection.console.internal.InternalClassFunctionRunnerIteratingOverClassPath"
+    // See https://docs.oracle.com/javase/9/tools/java.htm#JSWOR-GUID-4856361B-8BFD-4964-AE84-121F5F6CF111
+    val javaCommand: Seq[String] =
+      Seq("java", s"@${cpFile.toAbsolutePath}", mainClassName, configFile.toAbsolutePath.toString)
 
-    // For running the "java" command with argument files, see https://docs.oracle.com/en/java/javase/17/docs/specs/man/java.html#java-command-line-argument-files.
-    ???
+    // See https://www.baeldung.com/java-lang-processbuilder-api
+    val processBuilder: ProcessBuilder = new ProcessBuilder(javaCommand: _*)
+
+    val process: Process = processBuilder.start()
+    val processHandle: ProcessHandle = process.toHandle()
+    val processInfo: ProcessHandle.Info = processHandle.info()
+
+    println("PID: " + processHandle.pid())
+    println("Alive: " + processHandle.isAlive)
+    println("Info: " + processInfo)
+
+    Using.resource(process.getInputStream()) { is =>
+      is.transferTo(System.out)
+    }
+
+    val exitValue = process.waitFor()
+    require(exitValue == 0, s"Expected exit value 0, but got $exitValue")
   end main
+
+  private def getCombinedClassPath(classPathFile: Path): String =
+    val ownClassPath: Seq[String] = System
+      .getProperty("java.class.path")
+      .ensuring(!_.contains(";"))
+      .pipe(_.split(':').toSeq)
+
+    val extraClassPath: Seq[String] = Source
+      .fromFile(classPathFile.toFile)
+      .getLines()
+      .toSeq
+      .ensuring(_.forall(!_.contains(";")))
+      .flatMap(_.split(':').toSeq)
+
+    // TODO Deduplicate
+    ownClassPath.mkString(":") + ":" + extraClassPath.mkString(":")
+  end getCombinedClassPath
 
 end ClassFunctionRunnerIteratingOverClassPath

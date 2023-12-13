@@ -79,11 +79,16 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
     val pathHelper: PathHelper = componentSupplier.getPathHelper()
     val classHunter: ClassHunter = componentSupplier.getClassHunter()
 
+    val configFile: Path =
+      if Path.of(configJsonPath).isAbsolute then Path.of(configJsonPath)
+      else
+        pathHelper
+          .getResource(configJsonPath)
+          .pipe(_.getAbsolutePath)
+          .pipe(path => Path.of(path))
+
     val config: Config =
-      pathHelper
-        .getResource(configJsonPath)
-        .pipe(_.getAbsolutePath)
-        .pipe(path => Path.of(path))
+      configFile
         .pipe(path => Files.readString(path))
         .pipe(parser.parse)
         .toOption
