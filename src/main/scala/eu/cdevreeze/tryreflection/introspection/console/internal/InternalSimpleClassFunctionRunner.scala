@@ -98,8 +98,8 @@ object InternalSimpleClassFunctionRunner:
       .forPaths(pathHelper.getAllMainClassPaths)
       .by(
         ClassCriteria.create().className { cls =>
-          config.inputClassNames.exists(cfgCls => cls.contains(cfgCls))
-          && !skipClass(new JavaClass(Class.forName(cls)))
+          config.inputClassNames.contains(cls)
+          && !Try(skipClass(new JavaClass(Class.forName(cls)))).getOrElse(true)
         }
       )
 

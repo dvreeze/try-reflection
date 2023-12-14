@@ -4,5 +4,5 @@
   "classFunctionFactoryJsonInput": {
     "classesToFind": [ "scala.util.Try", "scala.util.Try$" ]
   },
-  "inputClassNames": [ "zio.ZIO$", "zio.ZEnvironment$", "zio.ZLayer", "zio.Clock", "zio.FiberId$" ]
+  "inputClassNames": [ "zio.ZIO$", "zio.ZEnvironment$", "zio.ZLayer$", "zio.Clock", "zio.FiberId$" ]
 }
