@@ -18,6 +18,7 @@ package eu.cdevreeze.tryreflection.introspection.console
 
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder, Json, parser}
+import org.burningwave.core.ManagedLogger
 import org.burningwave.core.assembler.{ComponentContainer, ComponentSupplier}
 import org.burningwave.core.io.PathHelper
 
@@ -37,7 +38,7 @@ import scala.util.chaining.scalaUtilChainingOps
  * @author
  *   Chris de Vreeze
  */
-object ClassFunctionRunnerIteratingOverClassPath:
+object ClassFunctionRunnerIteratingOverClassPath extends ManagedLogger:
 
   final case class Config(
       name: String,
@@ -69,13 +70,13 @@ object ClassFunctionRunnerIteratingOverClassPath:
         .pipe(_.getAbsolutePath)
         .pipe(path => Path.of(path))
 
-    val config: Config =
+    val configOption: Option[Config] =
       configFile
         .pipe(path => Files.readString(path))
         .pipe(parser.parse)
         .toOption
         .flatMap(_.as[Config].toOption)
-        .getOrElse(sys.error(s"Could not interpret the JSON program input as Config"))
+    require(configOption.nonEmpty, "Could not interpret the JSON program input as Config")
 
     val classPathFile: Path =
       pathHelper
@@ -88,7 +89,10 @@ object ClassFunctionRunnerIteratingOverClassPath:
     val cpFile: Path = Files.createTempFile("classpath-", ".txt")
     Files.writeString(cpFile, s"-cp $totalClassPath")
 
-    val mainClassName = "eu.cdevreeze.tryreflection.introspection.console.internal.InternalClassFunctionRunnerIteratingOverClassPath"
+    val mainClassName =
+      classOf[ClassFunctionRunnerIteratingOverClassPath.type].getPackageName
+        + ".internal.InternalClassFunctionRunnerIteratingOverClassPath"
+
     // See https://docs.oracle.com/javase/9/tools/java.htm#JSWOR-GUID-4856361B-8BFD-4964-AE84-121F5F6CF111
     val javaCommand: Seq[String] =
       Seq("java", s"@${cpFile.toAbsolutePath}", mainClassName, configFile.toAbsolutePath.toString)
@@ -100,9 +104,9 @@ object ClassFunctionRunnerIteratingOverClassPath:
     val processHandle: ProcessHandle = process.toHandle()
     val processInfo: ProcessHandle.Info = processHandle.info()
 
-    println("PID: " + processHandle.pid())
-    println("Alive: " + processHandle.isAlive)
-    println("Info: " + processInfo)
+    logInfo("PID: " + processHandle.pid())
+    logInfo("Alive: " + processHandle.isAlive)
+    logInfo("Info: " + processInfo)
 
     Using.resource(process.getInputStream()) { is =>
       is.transferTo(System.out)
