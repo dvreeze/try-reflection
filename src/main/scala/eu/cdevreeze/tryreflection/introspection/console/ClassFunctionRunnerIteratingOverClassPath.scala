@@ -33,7 +33,8 @@ import scala.util.chaining.scalaUtilChainingOps
  *
  * It forks program InternalClassFunctionRunnerIteratingOverClassPath in a different OS process, enhancing its classpath.
  *
- * The class path file could come from running command "mvn dependency:build-classpath", or command "cs fetch" on some artifact.
+ * The class path file could come from running command "mvn dependency:build-classpath", or command "cs fetch" on some artifact. Do not
+ * forget to then filter out the Scala library etc.
  *
  * @author
  *   Chris de Vreeze

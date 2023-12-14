@@ -20,7 +20,7 @@ import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunc
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder, Json, parser}
 import org.burningwave.core.assembler.{ComponentContainer, ComponentSupplier}
-import org.burningwave.core.classes.{ClassCriteria, ClassHunter, SearchConfig}
+import org.burningwave.core.classes.{ClassCriteria, ClassHunter, JavaClass, SearchConfig}
 import org.burningwave.core.io.PathHelper
 
 import java.nio.file.{Files, Path}
@@ -77,11 +77,16 @@ object InternalSimpleClassFunctionRunner:
     val pathHelper: PathHelper = componentSupplier.getPathHelper()
     val classHunter: ClassHunter = componentSupplier.getClassHunter()
 
+    val configFile: Path =
+      if Path.of(configJsonPath).isAbsolute then Path.of(configJsonPath)
+      else
+        pathHelper
+          .getResource(configJsonPath)
+          .pipe(_.getAbsolutePath)
+          .pipe(path => Path.of(path))
+
     val config: Config =
-      pathHelper
-        .getResource(configJsonPath)
-        .pipe(_.getAbsolutePath)
-        .pipe(path => Path.of(path))
+      configFile
         .pipe(path => Files.readString(path))
         .pipe(parser.parse)
         .toOption
@@ -90,8 +95,12 @@ object InternalSimpleClassFunctionRunner:
     val configResolver = ConfigResolver(config)
 
     val searchConfigForInputClasses = SearchConfig
-      .byCriteria(
-        ClassCriteria.create().className(cls => config.inputClassNames.contains(cls))
+      .forPaths(pathHelper.getAllMainClassPaths)
+      .by(
+        ClassCriteria.create().className { cls =>
+          config.inputClassNames.exists(cfgCls => cls.contains(cfgCls))
+          && !skipClass(new JavaClass(Class.forName(cls)))
+        }
       )
 
     val jsonResult: Json =
@@ -109,10 +118,19 @@ object InternalSimpleClassFunctionRunner:
         val classFunction: ClassFunctionReturningJson = factory.create(factoryInput)
 
         val clazzes: Seq[Class[_]] = searchResult.getClasses.asScala.toList
-        Json.fromValues(clazzes.flatMap(cls => Try(classFunction(cls)).toOption))
+
+        def getOptionalFunctionResult(cls: Class[_]): Option[Json] =
+          Try(classFunction(cls)).toOption.filterNot(_ == Json.obj())
+
+        Json.fromValues(clazzes.flatMap(getOptionalFunctionResult))
       }
 
     println(jsonResult)
   end main
+
+  private def skipClass(clazz: JavaClass): Boolean =
+    val classNameWithoutExtension = clazz.getClassFileName.stripSuffix(".class")
+    classNameWithoutExtension.stripSuffix("$").contains("$") ||
+    classNameWithoutExtension.contains("package")
 
 end InternalSimpleClassFunctionRunner
