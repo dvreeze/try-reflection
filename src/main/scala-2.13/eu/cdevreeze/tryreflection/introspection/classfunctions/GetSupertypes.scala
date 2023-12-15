@@ -66,9 +66,9 @@ final class GetSupertypes() extends ClassFunctionReturningJson {
     }
   }
 
-  object GetSupertypes extends ClassFunctionFactory[Json, GetSupertypes] {
+}
 
-    def create(configJson: Json): GetSupertypes = new GetSupertypes()
-  }
+object GetSupertypes extends ClassFunctionFactory[Json, GetSupertypes] {
 
+  def create(configJson: Json): GetSupertypes = new GetSupertypes()
 }

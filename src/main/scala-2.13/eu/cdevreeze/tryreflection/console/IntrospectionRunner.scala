@@ -40,7 +40,6 @@ object IntrospectionRunner {
     classOf[scala.Product],
     classOf[scala.collection.immutable.Seq[_]],
     classOf[scala.collection.immutable.List[_]],
-    Class.forName("scala.util.CommandLineParser$"),
     Class.forName("scala.jdk.javaapi.CollectionConverters$"),
     classOf[scala.io.Source],
     Class.forName("scala.io.Source$")
@@ -76,7 +75,7 @@ object IntrospectionRunner {
   }
 
   private def isNormalClass(clazz: Class[_]): Boolean = {
-    clazz.isInterface && !clazz.isEnum && !clazz.isArray && !clazz.isAnnotation && !clazz.isPrimitive
+    !clazz.isInterface && !clazz.isEnum && !clazz.isArray && !clazz.isAnnotation && !clazz.isPrimitive
   }
 
 }

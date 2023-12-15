@@ -90,8 +90,7 @@ object SimpleClassFunctionRunner extends ManagedLogger {
     Files.writeString(cpFile, s"-cp $totalClassPath")
 
     val mainClassName: String =
-      classOf[SimpleClassFunctionRunner.type].getPackageName
-        .concat(".internal.InternalSimpleClassFunctionRunner")
+      "eu.cdevreeze.tryreflection.introspection.console.internal.InternalSimpleClassFunctionRunner"
 
     // See https://docs.oracle.com/javase/9/tools/java.htm#JSWOR-GUID-4856361B-8BFD-4964-AE84-121F5F6CF111
     val javaCommand: Seq[String] =
