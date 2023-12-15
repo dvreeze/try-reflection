@@ -1,0 +1,7 @@
+{
+  "name": "GetSupertypes-zio",
+  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.GetSupertypes$",
+  "classFunctionFactoryJsonInput": {
+  },
+  "inputClassNames": [ "zio.ZIO", "zio.ZEnvironment", "zio.ZLayer", "zio.Clock", "zio.FiberId" ]
+}
