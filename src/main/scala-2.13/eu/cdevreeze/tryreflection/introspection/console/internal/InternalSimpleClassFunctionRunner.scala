@@ -24,9 +24,9 @@ import org.burningwave.core.classes.{ClassCriteria, ClassHunter, JavaClass, Sear
 import org.burningwave.core.io.PathHelper
 
 import java.nio.file.{Files, Path}
-import scala.jdk.CollectionConverters.*
-import scala.util.{Try, Using}
+import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
+import scala.util.{Try, Using}
 
 /**
  * Internal ClassFunction runner, called as program in a different OS process from SimpleClassFunctionRunner. The calling program makes sure
@@ -36,7 +36,7 @@ import scala.util.chaining.scalaUtilChainingOps
  * @author
  *   Chris de Vreeze
  */
-object InternalSimpleClassFunctionRunner:
+object InternalSimpleClassFunctionRunner {
 
   final case class Config(
       name: String,
@@ -45,12 +45,12 @@ object InternalSimpleClassFunctionRunner:
       inputClassNames: Seq[String]
   )
 
-  private given Encoder[Config] = deriveEncoder[Config]
+  private implicit val configEncoder: Encoder[Config] = deriveEncoder[Config]
 
-  private given Decoder[Config] = deriveDecoder[Config]
+  private implicit val configDecoder: Decoder[Config] = deriveDecoder[Config]
 
-  final case class ConfigResolver(config: Config):
-    def resolveClassFunctionFactoryClass(classHunter: ClassHunter): Class[ClassFunctionFactory[Json, _ <: ClassFunctionReturningJson]] =
+  final case class ConfigResolver(config: Config) {
+    def resolveClassFunctionFactoryClass(classHunter: ClassHunter): Class[ClassFunctionFactory[Json, _ <: ClassFunctionReturningJson]] = {
       val searchConfig = SearchConfig.byCriteria(
         ClassCriteria.create().className(_ == config.classFunctionFactoryClass)
       )
@@ -63,8 +63,10 @@ object InternalSimpleClassFunctionRunner:
           .get()
           .asInstanceOf[Class[ClassFunctionFactory[Json, _ <: ClassFunctionReturningJson]]]
       }
+    }
+  }
 
-  def main(args: Array[String]): Unit =
+  def main(args: Array[String]): Unit = {
     val configJsonPath: String =
       args
         .ensuring(
@@ -78,7 +80,7 @@ object InternalSimpleClassFunctionRunner:
     val classHunter: ClassHunter = componentSupplier.getClassHunter()
 
     val configFile: Path =
-      if Path.of(configJsonPath).isAbsolute then Path.of(configJsonPath)
+      if (Path.of(configJsonPath).isAbsolute) Path.of(configJsonPath)
       else
         pathHelper
           .getResource(configJsonPath)
@@ -98,8 +100,8 @@ object InternalSimpleClassFunctionRunner:
       .forPaths(pathHelper.getAllMainClassPaths)
       .by(
         ClassCriteria.create().className { cls =>
-          config.inputClassNames.contains(cls)
-          && !Try(skipClass(new JavaClass(Class.forName(cls)))).getOrElse(true)
+          config.inputClassNames.contains(cls) &&
+          !Try(skipClass(new JavaClass(Class.forName(cls)))).getOrElse(true)
         }
       )
 
@@ -126,11 +128,12 @@ object InternalSimpleClassFunctionRunner:
       }
 
     println(jsonResult)
-  end main
+  }
 
-  private def skipClass(clazz: JavaClass): Boolean =
+  private def skipClass(clazz: JavaClass): Boolean = {
     val classNameWithoutExtension = clazz.getClassFileName.stripSuffix(".class")
     classNameWithoutExtension.stripSuffix("$").contains("$") ||
     classNameWithoutExtension.contains("package")
+  }
 
-end InternalSimpleClassFunctionRunner
+}

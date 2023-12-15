@@ -17,8 +17,8 @@
 package eu.cdevreeze.tryreflection.introspection.classfunctions
 
 import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunctionReturningJson}
+import io.circe.generic.semiauto._
 import io.circe.{Decoder, Json}
-import io.circe.generic.semiauto.*
 
 import scala.util.Try
 
@@ -29,17 +29,16 @@ import scala.util.Try
  * @author
  *   Chris de Vreeze
  */
-final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson:
-
+final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson {
   def apply(clazz: Class[_]): Json =
     findClasses(classesToFind, clazz).getOrElse(Json.obj())
 
-  private def findClasses(classesToFind: Seq[Class[_]], classToInspect: Class[_]): Option[Json] =
-    val superclassOption = Option(classToInspect.getSuperclass())
+  private def findClasses(classesToFind: Seq[Class[_]], classToInspect: Class[_]): Option[Json] = {
+    val superclassOption: Option[Class[_]] = Option(classToInspect.getSuperclass())
 
     val jsonsForFoundClasses: Seq[Json] = classesToFind.flatMap(cls => findClass(cls, classToInspect))
 
-    if jsonsForFoundClasses.isEmpty then None
+    if (jsonsForFoundClasses.isEmpty) None
     else
       Some(
         Json.obj(
@@ -48,10 +47,11 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
           "foundTypeUsages" -> Json.fromValues(jsonsForFoundClasses)
         )
       )
+  }
 
-  private def findClass(classToFind: Class[_], classToInspect: Class[_]): Option[Json] =
+  private def findClass(classToFind: Class[_], classToInspect: Class[_]): Option[Json] = {
     Try {
-      val superclassOption = Option(classToInspect.getSuperclass())
+      val superclassOption: Option[Class[_]] = Option(classToInspect.getSuperclass())
       val interfaces = classToInspect.getInterfaces().toSeq
       val constructors = classToInspect.getDeclaredConstructors()
       val fields = classToInspect.getDeclaredFields().toSeq
@@ -77,11 +77,12 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       val matchingFieldAnnotations = fieldAnnotations.filter(a => classToFind.isAssignableFrom(a.annotationType()))
       val matchingMethodAnnotations = methodAnnotations.filter(a => classToFind.isAssignableFrom(a.annotationType()))
 
-      if classMatches || superclassMatches || matchingInterfaces.nonEmpty ||
+      if (
+        classMatches || superclassMatches || matchingInterfaces.nonEmpty ||
         matchingConstructors.nonEmpty || matchingFields.nonEmpty || matchingMethods.nonEmpty ||
         matchingClassAnnotations.nonEmpty || matchingConstructorAnnotations.nonEmpty ||
         matchingFieldAnnotations.nonEmpty || matchingMethodAnnotations.nonEmpty
-      then
+      ) {
         Some(
           Json.obj(
             "classToFind" -> Json.fromString(classToFind.getTypeName),
@@ -92,12 +93,16 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
             "matchingFields" -> Json.arr(matchingFields.map(f => Json.fromString(f.getName)): _*),
             "matchingMethods" -> Json.arr(matchingMethods.map(m => Json.fromString(m.getName)): _*),
             "matchingClassAnnotations" -> Json.arr(matchingClassAnnotations.map(a => Json.fromString(a.toString)): _*),
-            "matchingConstructorAnnotations" -> Json.arr(matchingConstructorAnnotations.map(a => Json.fromString(a.toString)): _*),
+            "matchingConstructorAnnotations" -> Json.arr(
+              matchingConstructorAnnotations.toIndexedSeq.map(a => Json.fromString(a.toString)): _*
+            ),
             "matchingFieldAnnotations" -> Json.arr(matchingFieldAnnotations.map(a => Json.fromString(a.toString)): _*),
             "matchingMethodAnnotations" -> Json.arr(matchingMethodAnnotations.map(a => Json.fromString(a.toString)): _*)
           )
         )
-      else None
+      } else {
+        None
+      }
     }.recover { case t: Throwable =>
       Some(
         Json.obj(
@@ -106,17 +111,19 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       )
     }.toOption
       .get
-  end findClass
+  }
+}
 
-object FindUsagesOfTypes extends ClassFunctionFactory[Json, FindUsagesOfTypes]:
+object FindUsagesOfTypes extends ClassFunctionFactory[Json, FindUsagesOfTypes] {
 
   final case class Config(classesToFind: Seq[String])
 
-  private given Decoder[Config] = deriveDecoder[Config]
+  private implicit val configDecoder: Decoder[Config] = deriveDecoder[Config]
 
-  def create(configJson: Json): FindUsagesOfTypes =
+  def create(configJson: Json): FindUsagesOfTypes = {
     val config: Config = configJson.as[Config].toOption.get
     val classesToFind: Seq[Class[_]] = config.classesToFind.flatMap(c => Try(Class.forName(c)).toOption)
-    FindUsagesOfTypes(classesToFind)
+    new FindUsagesOfTypes(classesToFind)
+  }
 
-end FindUsagesOfTypes
+}

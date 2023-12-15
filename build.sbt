@@ -1,6 +1,7 @@
 
-val scalaVer = "3.3.0"
-val crossScalaVer = Seq(scalaVer)
+val scalaVer = "2.13.12"
+val scala3Ver = "3.3.1"
+val crossScalaVer = Seq(scalaVer, scala3Ver)
 
 ThisBuild / description  := "Trying out Java reflection"
 ThisBuild / organization := "eu.cdevreeze.tryreflection"
@@ -44,10 +45,8 @@ ThisBuild / Test / fork := true
 lazy val root = project.in(file("."))
   .settings(
     name                 := "tryreflection",
-    publish              := {},
-    publishLocal         := {},
-    publishArtifact      := false,
-    Keys.`package`       := file(""))
+    crossScalaVersions   := crossScalaVer
+  )
 
 lazy val pomData =
   <url>https://github.com/dvreeze/try-reflection</url>

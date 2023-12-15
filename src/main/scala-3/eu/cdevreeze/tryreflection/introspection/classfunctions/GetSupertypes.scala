@@ -29,7 +29,7 @@ import java.lang.reflect.{ParameterizedType, Type}
  */
 final class GetSupertypes() extends ClassFunctionReturningJson:
 
-  def apply(clazz: Class[_]): Json =
+  def apply(clazz: Class[?]): Json =
     val superclasses: Seq[Type] = findSuperclasses(clazz)
     val interfaces: Seq[Type] =
       superclasses.prepended(clazz).flatMap(t => toClassOption(t)).flatMap(findInterfaces).distinct
@@ -44,22 +44,22 @@ final class GetSupertypes() extends ClassFunctionReturningJson:
     )
   end apply
 
-  private def findSuperclasses(clazz: Class[_]): Seq[Type] =
+  private def findSuperclasses(clazz: Class[?]): Seq[Type] =
     val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
     // Recursion
     superclassOption
       .map(cls => toClassOption(cls).toSeq.flatMap(findSuperclasses).prepended(cls))
       .getOrElse(Seq.empty)
 
-  private def findInterfaces(clazz: Class[_]): Seq[Type] =
+  private def findInterfaces(clazz: Class[?]): Seq[Type] =
     val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
     // Recursion
     interfaces.appendedAll(interfaces.flatMap(toClassOption).flatMap(findInterfaces)).distinct
 
-  private def toClassOption(tpe: Type): Option[Class[_]] =
+  private def toClassOption(tpe: Type): Option[Class[?]] =
     tpe match
-      case cls: Class[_]            => Option(cls)
-      case ptype: ParameterizedType => Option(ptype.getRawType).collect { case cls: Class[_] => cls }
+      case cls: Class[?]            => Option(cls)
+      case ptype: ParameterizedType => Option(ptype.getRawType).collect { case cls: Class[?] => cls }
       case _                        => None
 
 object GetSupertypes extends ClassFunctionFactory[Json, GetSupertypes]:

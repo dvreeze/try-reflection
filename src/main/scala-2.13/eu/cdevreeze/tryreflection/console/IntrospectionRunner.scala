@@ -25,7 +25,7 @@ import eu.cdevreeze.tryreflection.support.Introspector
  * @author
  *   Chris de Vreeze
  */
-object IntrospectionRunner:
+object IntrospectionRunner {
 
   private val exampleClasses: Seq[Class[_]] = Seq(
     classOf[AnyRef],
@@ -40,37 +40,43 @@ object IntrospectionRunner:
     classOf[scala.Product],
     classOf[scala.collection.immutable.Seq[_]],
     classOf[scala.collection.immutable.List[_]],
-    classOf[scala.util.CommandLineParser.type],
-    classOf[scala.jdk.javaapi.CollectionConverters.type],
+    Class.forName("scala.util.CommandLineParser$"),
+    Class.forName("scala.jdk.javaapi.CollectionConverters$"),
     classOf[scala.io.Source],
-    classOf[scala.io.Source.type]
+    Class.forName("scala.io.Source$")
   )
 
-  def main(args: Array[String]): Unit =
-    if args.nonEmpty then introspect(args.head)
+  def main(args: Array[String]): Unit = {
+    if (args.nonEmpty) introspect(args.head)
     else
       exampleClasses.foreach { cls =>
         println()
         println(introspect(cls).makeString)
       }
+  }
 
-  def introspect(className: String): Unit =
+  def introspect(className: String): Unit = {
     val clazz: Class[_] = Class.forName(className)
     println(introspect(clazz).makeString)
+  }
 
-  def introspect(clazz: Class[_]): LineGroup =
+  def introspect(clazz: Class[_]): LineGroup = {
     require(isNormalClass(clazz) || clazz.isInterface)
-    if isNormalClass(clazz) then introspectNormalClass(clazz) else introspectInterface(clazz)
+    if (isNormalClass(clazz)) introspectNormalClass(clazz) else introspectInterface(clazz)
+  }
 
-  private def introspectNormalClass(clazz: Class[_]): LineGroup =
+  private def introspectNormalClass(clazz: Class[_]): LineGroup = {
     require(isNormalClass(clazz))
     Introspector.forClass(clazz).introspect
+  }
 
-  private def introspectInterface(clazz: Class[_]): LineGroup =
+  private def introspectInterface(clazz: Class[_]): LineGroup = {
     require(clazz.isInterface)
     Introspector.forInterface(clazz).introspect
+  }
 
-  private def isNormalClass(clazz: Class[_]): Boolean =
-    !clazz.isInterface && !clazz.isEnum && !clazz.isArray && !clazz.isAnnotation && !clazz.isPrimitive
+  private def isNormalClass(clazz: Class[_]): Boolean = {
+    clazz.isInterface && !clazz.isEnum && !clazz.isArray && !clazz.isAnnotation && !clazz.isPrimitive
+  }
 
-end IntrospectionRunner
+}

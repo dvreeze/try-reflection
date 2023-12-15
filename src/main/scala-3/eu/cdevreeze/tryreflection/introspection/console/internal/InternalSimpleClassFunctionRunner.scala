@@ -21,7 +21,7 @@ import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder, Json, parser}
 import org.burningwave.core.assembler.{ComponentContainer, ComponentSupplier}
 import org.burningwave.core.classes.{ClassCriteria, ClassHunter, JavaClass, SearchConfig}
-import org.burningwave.core.io.{FileSystemItem, PathHelper}
+import org.burningwave.core.io.PathHelper
 
 import java.nio.file.{Files, Path}
 import scala.jdk.CollectionConverters.*
@@ -29,22 +29,20 @@ import scala.util.{Try, Using}
 import scala.util.chaining.scalaUtilChainingOps
 
 /**
- * Internal ClassFunctionRunnerIteratingOverClassPath runner, called as program in a different OS process from
- * ClassFunctionRunnerIteratingOverClassPath. The calling program makes sure this program runs with the correct classpath. Having the
- * correct classpath, this program does all the work of running a ClassFunction on given parts of the classpath.
+ * Internal ClassFunction runner, called as program in a different OS process from SimpleClassFunctionRunner. The calling program makes sure
+ * this program runs with the correct classpath. Having the correct classpath, this program does all the work of running a ClassFunction on
+ * given classes.
  *
  * @author
  *   Chris de Vreeze
  */
-object InternalClassFunctionRunnerIteratingOverClassPath:
+object InternalSimpleClassFunctionRunner:
 
   final case class Config(
       name: String,
       classFunctionFactoryClass: String,
       classFunctionFactoryJsonInput: Json,
-      packagePaths: Set[String], // Sub-packages will also be iterated over
-      excludedPackagePaths: Set[String],
-      searchPathsWithinClassPath: Seq[String] // May be partial, such as just a JAR file name without path
+      inputClassNames: Seq[String]
   )
 
   private given Encoder[Config] = deriveEncoder[Config]
@@ -52,7 +50,7 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
   private given Decoder[Config] = deriveDecoder[Config]
 
   final case class ConfigResolver(config: Config):
-    def resolveClassFunctionFactoryClass(classHunter: ClassHunter): Class[ClassFunctionFactory[Json, _ <: ClassFunctionReturningJson]] =
+    def resolveClassFunctionFactoryClass(classHunter: ClassHunter): Class[ClassFunctionFactory[Json, ? <: ClassFunctionReturningJson]] =
       val searchConfig = SearchConfig.byCriteria(
         ClassCriteria.create().className(_ == config.classFunctionFactoryClass)
       )
@@ -63,7 +61,7 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
           .findFirst()
           .ensuring(_.isPresent)
           .get()
-          .asInstanceOf[Class[ClassFunctionFactory[Json, _ <: ClassFunctionReturningJson]]]
+          .asInstanceOf[Class[ClassFunctionFactory[Json, ? <: ClassFunctionReturningJson]]]
       }
 
   def main(args: Array[String]): Unit =
@@ -71,7 +69,7 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
       args
         .ensuring(
           _.nonEmpty,
-          s"Usage: InternalClassFunctionRunnerIteratingOverClassPath <JSON file resource path> (e.g. sample-GetSupertypes-config.json)"
+          s"Usage: InternalSimpleClassFunctionRunner <JSON file resource path> (e.g. sample-FindUsagesOfTypes-config.json)"
         )
         .head
 
@@ -96,21 +94,12 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
         .getOrElse(sys.error(s"Could not interpret the JSON program input as Config"))
     val configResolver = ConfigResolver(config)
 
-    val searchPaths: java.util.Collection[String] =
-      if config.searchPathsWithinClassPath.isEmpty then pathHelper.getAllMainClassPaths
-      else pathHelper.getPaths(p => config.searchPathsWithinClassPath.exists(cfgPath => p.contains(cfgPath)))
-
     val searchConfigForInputClasses = SearchConfig
-      .forPaths(searchPaths)
-      .addFileFilter(
-        FileSystemItem.Criteria.forAllFileThat { fileSystemItem =>
-          val javaClassOption = Option(fileSystemItem.toJavaClass).filterNot(skipClass)
-          val javaClassPkgOption = javaClassOption.flatMap(c => Option(c.getPackagePath))
-
-          val matches: Boolean =
-            javaClassPkgOption.exists(p => config.packagePaths.exists(cfgPp => p.startsWith(cfgPp)))
-              && javaClassPkgOption.forall(p => !config.excludedPackagePaths.exists(cfgPp => p.startsWith(cfgPp)))
-          matches
+      .forPaths(pathHelper.getAllMainClassPaths)
+      .by(
+        ClassCriteria.create().className { cls =>
+          config.inputClassNames.contains(cls)
+          && !Try(skipClass(new JavaClass(Class.forName(cls)))).getOrElse(true)
         }
       )
 
@@ -128,9 +117,9 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
 
         val classFunction: ClassFunctionReturningJson = factory.create(factoryInput)
 
-        val clazzes: Seq[Class[_]] = searchResult.getClasses.asScala.toList
+        val clazzes: Seq[Class[?]] = searchResult.getClasses.asScala.toList
 
-        def getOptionalFunctionResult(cls: Class[_]): Option[Json] =
+        def getOptionalFunctionResult(cls: Class[?]): Option[Json] =
           Try(classFunction(cls)).toOption.filterNot(_ == Json.obj())
 
         Json.fromValues(clazzes.flatMap(getOptionalFunctionResult))
@@ -144,4 +133,4 @@ object InternalClassFunctionRunnerIteratingOverClassPath:
     classNameWithoutExtension.stripSuffix("$").contains("$") ||
     classNameWithoutExtension.contains("package")
 
-end InternalClassFunctionRunnerIteratingOverClassPath
+end InternalSimpleClassFunctionRunner

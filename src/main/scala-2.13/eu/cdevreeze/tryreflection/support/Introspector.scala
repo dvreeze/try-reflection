@@ -18,7 +18,7 @@ package eu.cdevreeze.tryreflection.support
 
 import eu.cdevreeze.tryreflection.internal.LineGroup
 
-import java.lang.reflect.{Constructor, Field, Method, Modifier, Type, TypeVariable}
+import java.lang.reflect._
 import scala.util.chaining.scalaUtilChainingOps
 
 /**
@@ -27,15 +27,16 @@ import scala.util.chaining.scalaUtilChainingOps
  * @author
  *   Chris de Vreeze
  */
-object Introspector:
+object Introspector {
 
-  sealed trait Introspector:
+  sealed trait Introspector {
     def introspect: LineGroup
+  }
 
-  final class ClassIntrospector(val clazz: Class[_]) extends Introspector:
+  final class ClassIntrospector(val clazz: Class[_]) extends Introspector {
     require(isNormalClass(clazz))
 
-    def introspect: LineGroup =
+    def introspect: LineGroup = {
       LineGroup.from(
         getClassNameWithSuperTypes.appendStringToLastLine(" {"),
         LineGroup
@@ -49,12 +50,13 @@ object Introspector:
           .shiftRight(LineGroup.javaIndent),
         LineGroup.of("}")
       )
+    }
 
-    private def getClassNameWithSuperTypes: LineGroup =
+    private def getClassNameWithSuperTypes: LineGroup = {
       val nameWithModifiers = getClassNameWithModifiers
       val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
       val extendedInterfaces = clazz.getGenericInterfaces().toSeq
-      val firstLine: String = (superclassOption, extendedInterfaces) match
+      val firstLine: String = (superclassOption, extendedInterfaces) match {
         case (None, Nil) => nameWithModifiers
         case (None, _) =>
           s"$nameWithModifiers implements ${extendedInterfaces.map(_.getTypeName).mkString(", ")}"
@@ -62,16 +64,19 @@ object Introspector:
           s"$nameWithModifiers extends ${tpe.getTypeName}"
         case (Some(tpe), _) =>
           s"$nameWithModifiers extends ${tpe.getTypeName} implements ${extendedInterfaces.map(_.getTypeName).mkString(", ")}"
+      }
       LineGroup.of(firstLine)
+    }
 
-    private def getClassNameWithModifiers: String =
+    private def getClassNameWithModifiers: String = {
       val modifiersString = getModifiersAsString
       val fullClassName = clazz.getTypeName()
-      val typeParams = clazz.getTypeParameters.toSeq
+      val typeParams: Seq[TypeVariable[_]] = clazz.getTypeParameters.toSeq
       s"$modifiersString class $fullClassName"
-        .pipe(s => if typeParams.isEmpty then s else s"$s<${typeParams.map(tp => show(tp)).mkString(", ")}>")
+        .pipe(s => if (typeParams.isEmpty) s else s"$s<${typeParams.map(tp => show(tp)).mkString(", ")}>")
+    }
 
-    private def getModifiersAsString: String =
+    private def getModifiersAsString: String = {
       val mods = clazz.getModifiers()
       val isPublic = Modifier.isPublic(mods)
       val isProtected = Modifier.isProtected(mods)
@@ -81,29 +86,29 @@ object Introspector:
       val isAbstract = Modifier.isAbstract(mods)
 
       val accessModifierString: String =
-        if isPublic then "public"
-        else if isProtected then "protected"
-        else if isPrivate then "private"
+        if (isPublic) "public"
+        else if (isProtected) "protected"
+        else if (isPrivate) "private"
         else ""
 
-      val staticModifierString: String = if isStatic then "static" else ""
+      val staticModifierString: String = if (isStatic) "static" else ""
 
       val finalOrAbstractModifierString: String =
-        if isFinal then "final"
-        else if isAbstract then "abstract"
+        if (isFinal) "final"
+        else if (isAbstract) "abstract"
         else ""
 
       Seq(accessModifierString, staticModifierString, finalOrAbstractModifierString)
         .filter(_.nonEmpty)
         .mkString(" ")
-    end getModifiersAsString
+    }
 
-  end ClassIntrospector
+  }
 
-  final class InterfaceIntrospector(val clazz: Class[_]) extends Introspector:
+  final class InterfaceIntrospector(val clazz: Class[_]) extends Introspector {
     require(clazz.isInterface)
 
-    def introspect: LineGroup =
+    def introspect: LineGroup = {
       LineGroup.from(
         getInterfaceNameWithSuperTypes.appendStringToLastLine(" {"),
         LineGroup
@@ -116,23 +121,27 @@ object Introspector:
           .shiftRight(LineGroup.javaIndent),
         LineGroup.of("}")
       )
+    }
 
-    private def getInterfaceNameWithSuperTypes: LineGroup =
+    private def getInterfaceNameWithSuperTypes: LineGroup = {
       val nameWithModifiers = getInterfaceNameWithModifiers
       val extendedInterfaces = clazz.getGenericInterfaces().toSeq
-      val firstLine: String = extendedInterfaces match
+      val firstLine: String = extendedInterfaces match {
         case Nil => nameWithModifiers
         case _   => s"$nameWithModifiers extends ${extendedInterfaces.map(_.getTypeName).mkString(", ")}"
+      }
       LineGroup.of(firstLine)
+    }
 
-    private def getInterfaceNameWithModifiers: String =
+    private def getInterfaceNameWithModifiers: String = {
       val modifiersString = getModifiersAsString
       val fullClassName = clazz.getTypeName()
-      val typeParams = clazz.getTypeParameters.toSeq
+      val typeParams: Seq[TypeVariable[_]] = clazz.getTypeParameters.toSeq
       s"$modifiersString interface $fullClassName"
-        .pipe(s => if typeParams.isEmpty then s else s"$s<${typeParams.map(tp => show(tp)).mkString(", ")}>")
+        .pipe(s => if (typeParams.isEmpty) s else s"$s<${typeParams.map(tp => show(tp)).mkString(", ")}>")
+    }
 
-    private def getModifiersAsString: String =
+    private def getModifiersAsString: String = {
       val mods = clazz.getModifiers()
       val isPublic = Modifier.isPublic(mods)
       val isProtected = Modifier.isProtected(mods)
@@ -140,36 +149,40 @@ object Introspector:
       val isStatic = Modifier.isStatic(mods)
 
       val accessModifierString: String =
-        if isPublic then "public"
-        else if isProtected then "protected"
-        else if isPrivate then "private"
+        if (isPublic) "public"
+        else if (isProtected) "protected"
+        else if (isPrivate) "private"
         else ""
 
-      val staticModifierString: String = if isStatic then "static" else ""
+      val staticModifierString: String = if (isStatic) "static" else ""
 
       Seq(accessModifierString, staticModifierString)
         .filter(_.nonEmpty)
         .mkString(" ")
-    end getModifiersAsString
+    }
 
-  end InterfaceIntrospector
+  }
 
-  final class MethodIntrospector(val method: Method) extends Introspector:
+  final class MethodIntrospector(val method: Method) extends Introspector {
 
     def introspect: LineGroup = LineGroup.of(method.toGenericString + ";")
+  }
 
-  final class ConstructorIntrospector(val constructor: Constructor[_]) extends Introspector:
+  final class ConstructorIntrospector(val constructor: Constructor[_]) extends Introspector {
 
     def introspect: LineGroup = LineGroup.of(constructor.toGenericString + ";")
+  }
 
-  final class FieldIntrospector(val field: Field) extends Introspector:
+  final class FieldIntrospector(val field: Field) extends Introspector {
 
     def introspect: LineGroup = LineGroup.of(field.toGenericString + ";")
+  }
 
-  private def show(typeVar: TypeVariable[_]): String =
+  private def show(typeVar: TypeVariable[_]): String = {
     val name = typeVar.getName
-    val bounds: Array[Type] = typeVar.getBounds
-    if bounds.isEmpty then name else s"$name extends ${bounds.mkString(" & ")}"
+    val bounds: scala.Array[Type] = typeVar.getBounds
+    if (bounds.isEmpty) name else s"$name extends ${bounds.mkString(" & ")}"
+  }
 
   /**
    * Returns true if the parameter Class does not refer to an interface, array type, annotation or primitive.
@@ -177,14 +190,14 @@ object Introspector:
   def isNormalClass(clazz: Class[_]): Boolean =
     !clazz.isInterface && !clazz.isArray && !clazz.isAnnotation && !clazz.isPrimitive
 
-  def forClass(clazz: Class[_]): ClassIntrospector = ClassIntrospector(clazz)
+  def forClass(clazz: Class[_]): ClassIntrospector = new ClassIntrospector(clazz)
 
-  def forInterface(clazz: Class[_]): InterfaceIntrospector = InterfaceIntrospector(clazz)
+  def forInterface(clazz: Class[_]): InterfaceIntrospector = new InterfaceIntrospector(clazz)
 
-  def forMethod(method: Method): MethodIntrospector = MethodIntrospector(method)
+  def forMethod(method: Method): MethodIntrospector = new MethodIntrospector(method)
 
-  def forConstructor(cons: Constructor[_]): ConstructorIntrospector = ConstructorIntrospector(cons)
+  def forConstructor(cons: Constructor[_]): ConstructorIntrospector = new ConstructorIntrospector(cons)
 
-  def forField(fld: Field): FieldIntrospector = FieldIntrospector(fld)
+  def forField(fld: Field): FieldIntrospector = new FieldIntrospector(fld)
 
-end Introspector
+}
