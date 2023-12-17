@@ -28,7 +28,7 @@ import scala.util.Using
 import scala.util.chaining.scalaUtilChainingOps
 
 /**
- * ClassFunction runner. It takes a JSON config file, as well as a class path file.
+ * ClassFunction runner. It takes 2 JSON config files (for runner and class function), as well as a class path file.
  *
  * It forks program InternalSimpleClassFunctionRunner in a different OS process, enhancing its classpath.
  *
