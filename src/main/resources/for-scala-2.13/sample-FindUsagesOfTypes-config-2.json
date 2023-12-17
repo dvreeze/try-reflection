@@ -1,8 +1,0 @@
-{
-  "name": "FindUsagesOfTypes-zio-2",
-  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.FindUsagesOfTypes$",
-  "classFunctionFactoryJsonInput": {
-    "classesToFind": [ "scala.util.Try", "scala.util.Try$" ]
-  },
-  "inputClassNames": [ "zio.ZIO$", "zio.ZEnvironment$", "zio.ZLayer$", "zio.Clock", "zio.FiberId$" ]
-}

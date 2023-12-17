@@ -3,10 +3,5 @@
   "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.FindUsagesOfTypes$",
   "classFunctionFactoryJsonInput": {
     "classesToFind": [ "scala.util.Try", "scala.util.Try$" ]
-  },
-  "packagePaths": [ "zio" ],
-  "excludedPackagePaths": [ "izumi/reflect/", "zio/internal/" ],
-  "searchPathsWithinClassPath": [
-    "zio_2.13-2.0.20.jar"
-  ]
+  }
 }

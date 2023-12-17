@@ -16,16 +16,14 @@
 
 package eu.cdevreeze.tryreflection.introspection.console
 
-import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
-import io.circe.parser.parse
-import io.circe.{Decoder, Encoder, Json, parser}
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.{Decoder, Json, parser}
 import org.burningwave.core.ManagedLogger
 import org.burningwave.core.assembler.{ComponentContainer, ComponentSupplier}
 import org.burningwave.core.io.PathHelper
 
 import java.nio.file.{Files, Path}
 import scala.io.Source
-import scala.jdk.CollectionConverters._
 import scala.util.Using
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -43,46 +41,38 @@ import scala.util.chaining.scalaUtilChainingOps
 object SimpleClassFunctionRunner extends ManagedLogger {
 
   final case class Config(
-      name: String,
-      classFunctionFactoryClass: String,
-      classFunctionFactoryJsonInput: Json,
       inputClassNames: Seq[String]
   )
-
-  private implicit val configEncoder: Encoder[Config] = deriveEncoder[Config]
 
   private implicit val configDecoder: Decoder[Config] = deriveDecoder[Config]
 
   def main(args: Array[String]): Unit = {
     require(
-      args.sizeIs == 2,
-      s"Usage: SimpleClassFunctionRunner <JSON file resource path> <classpath file> "
+      args.sizeIs == 3,
+      s"Usage: SimpleClassFunctionRunner <JSON config resource path> <ClassFunction JSON config resource path> <classpath file> "
     )
     val configJsonPath: String = args(0)
-    val classPathFilePath: String = args(1)
+    val classFunctionConfigJsonPath: String = args(1)
+    val classPathFilePath: String = args(2)
 
     val componentSupplier: ComponentSupplier = ComponentContainer.getInstance()
     val pathHelper: PathHelper = componentSupplier.getPathHelper()
 
-    val configFile: Path =
-      pathHelper
-        .getResource(configJsonPath)
-        .pipe(_.getAbsolutePath)
-        .pipe(path => Path.of(path))
+    val configFile: Path = getFilePath(configJsonPath, pathHelper)
 
     val configOption: Option[Config] =
-      configFile
-        .pipe(path => Files.readString(path))
-        .pipe(parser.parse)
-        .toOption
+      parseJson(configFile)
         .flatMap(_.as[Config].toOption)
-    require(configOption.nonEmpty, "Could not interpret the JSON program input as Config")
+    require(configOption.nonEmpty, "Could not interpret the JSON program parameter as Config")
 
-    val classPathFile: Path =
-      pathHelper
-        .getResource(classPathFilePath)
-        .pipe(_.getAbsolutePath)
-        .pipe(path => Path.of(path))
+    val classFunctionConfigFile: Path = getFilePath(classFunctionConfigJsonPath, pathHelper)
+
+    val classFunctionConfigOption: Option[ClassFunctionFactories.Config] =
+      parseJson(classFunctionConfigFile)
+        .flatMap(_.as[ClassFunctionFactories.Config].toOption)
+    require(classFunctionConfigOption.nonEmpty, "Could not interpret the ClassFunction JSON program parameter as Config")
+
+    val classPathFile: Path = getFilePath(classPathFilePath, pathHelper)
 
     val totalClassPath: String = getCombinedClassPath(classPathFile)
 
@@ -94,7 +84,13 @@ object SimpleClassFunctionRunner extends ManagedLogger {
 
     // See https://docs.oracle.com/javase/9/tools/java.htm#JSWOR-GUID-4856361B-8BFD-4964-AE84-121F5F6CF111
     val javaCommand: Seq[String] =
-      Seq("java", s"@${cpFile.toAbsolutePath}", mainClassName, configFile.toAbsolutePath.toString)
+      Seq(
+        "java",
+        s"@${cpFile.toAbsolutePath}",
+        mainClassName,
+        configFile.toAbsolutePath.toString,
+        classFunctionConfigFile.toAbsolutePath.toString
+      )
 
     // See https://www.baeldung.com/java-lang-processbuilder-api
     val processBuilder: ProcessBuilder = new ProcessBuilder(javaCommand: _*)
@@ -113,6 +109,22 @@ object SimpleClassFunctionRunner extends ManagedLogger {
 
     val exitValue = process.waitFor()
     require(exitValue == 0, s"Expected exit value 0, but got $exitValue")
+  }
+
+  private def getFilePath(file: String, pathHelper: PathHelper): Path = {
+    if (Path.of(file).isAbsolute) Path.of(file)
+    else
+      pathHelper
+        .getResource(file)
+        .pipe(_.getAbsolutePath)
+        .pipe(path => Path.of(path))
+  }
+
+  private def parseJson(file: Path): Option[Json] = {
+    file
+      .pipe(path => Files.readString(path))
+      .pipe(parser.parse)
+      .toOption
   }
 
   private def getCombinedClassPath(classPathFile: Path): String = {

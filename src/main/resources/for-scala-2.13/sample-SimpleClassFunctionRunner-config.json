@@ -1,0 +1,3 @@
+{
+  "inputClassNames": [ "zio.ZIO", "zio.ZIO$", "zio.ZEnvironment", "zio.ZLayer", "zio.Clock", "zio.FiberId" ]
+}
