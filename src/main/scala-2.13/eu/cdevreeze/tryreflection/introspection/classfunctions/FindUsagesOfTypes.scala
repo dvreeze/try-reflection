@@ -20,6 +20,7 @@ import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunc
 import io.circe.generic.semiauto._
 import io.circe.{Decoder, Json}
 
+import java.lang.reflect.{ParameterizedType, Type}
 import scala.util.Try
 
 /**
@@ -38,6 +39,9 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
     val interfaces = classToInspect.getInterfaces().toSeq
     val constructors = classToInspect.getDeclaredConstructors().toSeq
 
+    val allGenericSuperclasses: Seq[Type] = findSuperclasses(classToInspect)
+    val allGenericInterfaces: Seq[Type] = findInterfaces(classToInspect)
+
     val jsonsForFoundClasses: Seq[Json] = classesToFind.flatMap(cls => findClass(cls, classToInspect))
     val summaryJsonOption: Option[Json] = getSummary(classesToFind, classToInspect)
 
@@ -48,6 +52,8 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
           "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
           "superclass" -> superclassOption.map(c => Json.fromString(c.getTypeName)).getOrElse(Json.Null),
           "interfaces" -> Json.arr(interfaces.map(c => Json.fromString(c.toString)): _*),
+          "allGenericSuperclasses" -> Json.arr(allGenericSuperclasses.map(c => Json.fromString(c.toString)): _*),
+          "allGenericInterfaces" -> Json.arr(allGenericInterfaces.map(c => Json.fromString(c.toString)): _*),
           "constructors" -> Json.arr(constructors.map(c => Json.fromString(c.toString)): _*),
           "foundTypeUsages" -> Json.fromValues(jsonsForFoundClasses),
           "summary" -> summaryJsonOption.getOrElse(Json.obj())
@@ -169,6 +175,28 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       )
     }.toOption
       .get
+  }
+
+  private def findSuperclasses(clazz: Class[_]): Seq[Type] = {
+    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
+    // Recursion
+    superclassOption
+      .map(cls => toClassOption(cls).toSeq.flatMap(findSuperclasses).prepended(cls))
+      .getOrElse(Seq.empty)
+  }
+
+  private def findInterfaces(clazz: Class[_]): Seq[Type] = {
+    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
+    // Recursion
+    interfaces.appendedAll(interfaces.flatMap(toClassOption).flatMap(findInterfaces)).distinct
+  }
+
+  private def toClassOption(tpe: Type): Option[Class[_]] = {
+    tpe match {
+      case cls: Class[_]            => Option(cls)
+      case ptype: ParameterizedType => Option(ptype.getRawType).collect { case cls: Class[_] => cls }
+      case _                        => None
+    }
   }
 }
 
