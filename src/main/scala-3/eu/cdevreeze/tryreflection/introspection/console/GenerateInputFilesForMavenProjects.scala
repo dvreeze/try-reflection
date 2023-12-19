@@ -101,9 +101,7 @@ object GenerateInputFilesForMavenProjects extends ManagedLogger:
     config.projects.foreach { project =>
       val projectPath: Path = config.workingDirectory.resolve(project.name)
 
-      if (isMavenProject(projectPath)) {
-        runForMavenProject(project, config)
-      }
+      if isMavenProject(projectPath) then runForMavenProject(project, config)
     }
   end runForMaven
 
@@ -203,7 +201,7 @@ object GenerateInputFilesForMavenProjects extends ManagedLogger:
   end runCommand
 
   private def getFilePath(file: String, pathHelper: PathHelper): Path =
-    if (Path.of(file).isAbsolute) Path.of(file)
+    if Path.of(file).isAbsolute then Path.of(file)
     else
       pathHelper
         .getResource(file)
