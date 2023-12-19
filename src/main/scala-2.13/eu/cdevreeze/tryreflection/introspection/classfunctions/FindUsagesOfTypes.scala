@@ -35,6 +35,8 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
 
   private def findClasses(classesToFind: Seq[Class[_]], classToInspect: Class[_]): Option[Json] = {
     val superclassOption: Option[Class[_]] = Option(classToInspect.getSuperclass())
+    val interfaces = classToInspect.getInterfaces().toSeq
+    val constructors = classToInspect.getDeclaredConstructors().toSeq
 
     val jsonsForFoundClasses: Seq[Json] = classesToFind.flatMap(cls => findClass(cls, classToInspect))
 
@@ -44,6 +46,8 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
         Json.obj(
           "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
           "superclass" -> superclassOption.map(c => Json.fromString(c.getTypeName)).getOrElse(Json.Null),
+          "interfaces" -> Json.arr(interfaces.map(c => Json.fromString(c.toString)): _*),
+          "constructors" -> Json.arr(constructors.map(c => Json.fromString(c.toString)): _*),
           "foundTypeUsages" -> Json.fromValues(jsonsForFoundClasses)
         )
       )
