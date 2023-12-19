@@ -39,6 +39,7 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
     val constructors = classToInspect.getDeclaredConstructors().toSeq
 
     val jsonsForFoundClasses: Seq[Json] = classesToFind.flatMap(cls => findClass(cls, classToInspect))
+    val summaryJsonOption: Option[Json] = getSummary(classesToFind, classToInspect)
 
     if (jsonsForFoundClasses.isEmpty) None
     else
@@ -48,7 +49,8 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
           "superclass" -> superclassOption.map(c => Json.fromString(c.getTypeName)).getOrElse(Json.Null),
           "interfaces" -> Json.arr(interfaces.map(c => Json.fromString(c.toString)): _*),
           "constructors" -> Json.arr(constructors.map(c => Json.fromString(c.toString)): _*),
-          "foundTypeUsages" -> Json.fromValues(jsonsForFoundClasses)
+          "foundTypeUsages" -> Json.fromValues(jsonsForFoundClasses),
+          "summary" -> summaryJsonOption.getOrElse(Json.obj())
         )
       )
   }
@@ -102,6 +104,58 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
             ),
             "matchingFieldAnnotations" -> Json.arr(matchingFieldAnnotations.map(a => Json.fromString(a.toString)): _*),
             "matchingMethodAnnotations" -> Json.arr(matchingMethodAnnotations.map(a => Json.fromString(a.toString)): _*)
+          )
+        )
+      } else {
+        None
+      }
+    }.recover { case t: Throwable =>
+      Some(
+        Json.obj(
+          "exceptionThrown" -> Json.fromString(t.toString)
+        )
+      )
+    }.toOption
+      .get
+  }
+
+  private def getSummary(classesToFind: Seq[Class[_]], classToInspect: Class[_]): Option[Json] = {
+    Try {
+      val constructors = classToInspect.getDeclaredConstructors()
+      val fields = classToInspect.getDeclaredFields().toSeq
+      val methods = classToInspect.getDeclaredMethods().toSeq
+
+      val classAnnotations = classToInspect.getDeclaredAnnotations().toSeq
+      val constructorAnnotations = constructors.flatMap(_.getDeclaredAnnotations().toSeq)
+      val fieldAnnotations = fields.flatMap(_.getDeclaredAnnotations().toSeq)
+      val methodAnnotations = methods.flatMap(_.getDeclaredAnnotations().toSeq)
+
+      val isAMatches = classesToFind.filter { cls =>
+        cls.isAssignableFrom(classToInspect) ||
+        classAnnotations.exists(a => cls.isAssignableFrom(a.annotationType()))
+      }
+
+      val hasAMatches = classesToFind.filter { cls =>
+        fields.exists(fld => cls.isAssignableFrom(fld.getType())) ||
+        constructors.exists(_.getParameterTypes().exists(c => cls.isAssignableFrom(c))) ||
+        constructorAnnotations.exists(a => cls.isAssignableFrom(a.annotationType())) ||
+        fieldAnnotations.exists(a => cls.isAssignableFrom(a.annotationType())) ||
+        methodAnnotations.exists(a => cls.isAssignableFrom(a.annotationType()))
+      }
+
+      val methodParamOrReturnTypeMatches = classesToFind.filter { cls =>
+        methods.exists { method =>
+          method.getParameterTypes().exists(c => cls.isAssignableFrom(c)) ||
+          cls.isAssignableFrom(method.getReturnType())
+        }
+      }
+
+      if (isAMatches.nonEmpty || hasAMatches.nonEmpty || methodParamOrReturnTypeMatches.nonEmpty) {
+        Some(
+          Json.obj(
+            "is" -> Json.arr(isAMatches.map(c => Json.fromString(c.toString)): _*),
+            "has" -> Json.arr(hasAMatches.map(c => Json.fromString(c.toString)): _*),
+            "hasMethodsTakingOrReturning" -> Json.arr(methodParamOrReturnTypeMatches.map(c => Json.fromString(c.toString)): _*)
           )
         )
       } else {
