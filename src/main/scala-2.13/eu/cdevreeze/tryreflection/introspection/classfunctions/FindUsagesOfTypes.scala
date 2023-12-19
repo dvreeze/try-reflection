@@ -40,7 +40,7 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
     val constructors = classToInspect.getDeclaredConstructors().toSeq
 
     val allGenericSuperclasses: Seq[Type] = findSuperclasses(classToInspect)
-    val allGenericInterfaces: Seq[Type] = findInterfaces(classToInspect)
+    val allGenericInterfaces: Seq[Type] = findAllInterfaces(classToInspect)
 
     val jsonsForFoundClasses: Seq[Json] = classesToFind.flatMap(cls => findClass(cls, classToInspect))
     val summaryJsonOption: Option[Json] = getSummary(classesToFind, classToInspect)
@@ -189,6 +189,10 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
     val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
     // Recursion
     interfaces.appendedAll(interfaces.flatMap(toClassOption).flatMap(findInterfaces)).distinct
+  }
+
+  private def findAllInterfaces(clazz: Class[_]): Seq[Type] = {
+    findSuperclasses(clazz).prepended(clazz).flatMap(toClassOption).flatMap(findInterfaces).distinct
   }
 
   private def toClassOption(tpe: Type): Option[Class[_]] = {
