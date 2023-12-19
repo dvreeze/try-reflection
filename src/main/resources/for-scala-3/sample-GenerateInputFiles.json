@@ -1,0 +1,15 @@
+{
+  "workingDirectory": "/home/chris/workspaces/github-others",
+  "mavenCommand": "mvn",
+  "projects": [
+    {
+      "name": "maven_java_web_example",
+      "rootPackagePaths": [ "java/api/servlet" ],
+      "targetClassesDir": "target/classes"
+    }
+  ],
+  "outputDirectory": "/tmp/output",
+  "gitBranch": "master",
+  "initialCommands": [
+  ]
+}

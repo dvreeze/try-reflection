@@ -39,7 +39,7 @@ import scala.util.{Try, Using}
  * @author
  *   Chris de Vreeze
  */
-object GenerateInputFilesForMavenProjects extends ManagedLogger {
+object GenerateInputFilesForMavenProjects extends ManagedLogger:
 
   final case class Command(command: Seq[String])
 
@@ -60,15 +60,15 @@ object GenerateInputFilesForMavenProjects extends ManagedLogger {
       searchPathsWithinClassPath: Seq[Path] // May be partial, such as just a JAR file name without path
   )
 
-  implicit val pathDecoder: Decoder[Path] = Decoder.decodeString.map(s => Path.of(s))
-  implicit val commandDecoder: Decoder[Command] = deriveDecoder[Command]
-  implicit val projectDecoder: Decoder[Project] = deriveDecoder[Project]
-  implicit val configDecoder: Decoder[Config] = deriveDecoder[Config]
+  given pathDecoder: Decoder[Path] = Decoder.decodeString.map(s => Path.of(s))
+  given commandDecoder: Decoder[Command] = deriveDecoder[Command]
+  given projectDecoder: Decoder[Project] = deriveDecoder[Project]
+  given configDecoder: Decoder[Config] = deriveDecoder[Config]
 
-  implicit val pathEncoder: Encoder[Path] = Encoder.encodeString.contramap(_.toString)
-  implicit val runnerConfigEncoder: Encoder[RunnerConfig] = deriveEncoder[RunnerConfig]
+  given pathEncoder: Encoder[Path] = Encoder.encodeString.contramap(_.toString)
+  given runnerConfigEncoder: Encoder[RunnerConfig] = deriveEncoder[RunnerConfig]
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit =
     require(
       args.sizeIs == 1,
       s"Usage: GenerateInputFilesForMavenProjects <JSON config resource path>"
@@ -86,10 +86,10 @@ object GenerateInputFilesForMavenProjects extends ManagedLogger {
         .getOrElse(sys.error("Could not interpret the JSON program parameter as Config"))
 
     runForMaven(config)
-  }
+  end main
 
-  def runForMaven(config: Config): Unit = {
-    implicit val workingDirectory: Path = config.workingDirectory
+  def runForMaven(config: Config): Unit =
+    given workingDirectory: Path = config.workingDirectory
 
     runCommand(Seq("mkdir", "-p", config.outputDirectory.toAbsolutePath.toString))
       .ensuring(_ == 0, s"Could not create output directory ${config.outputDirectory}")
@@ -105,20 +105,19 @@ object GenerateInputFilesForMavenProjects extends ManagedLogger {
         runForMavenProject(project, config)
       }
     }
-  }
+  end runForMaven
 
-  private def isMavenProject(path: Path): Boolean = {
+  private def isMavenProject(path: Path): Boolean =
     val depth = 1
     Files.isDirectory(path) &&
     Files.find(path, depth, { (p, _) => p.getFileName == Path.of("pom.xml") }).findFirst().isPresent
-  }
 
-  private def runForMavenProject(project: Project, config: Config): Unit = {
+  private def runForMavenProject(project: Project, config: Config): Unit =
     val projectOption: Option[Project] = config.projects.find(_.name == project.name)
 
     projectOption.foreach { project =>
       Try {
-        implicit val projectPath: Path = config.workingDirectory.resolve(project.name)
+        given projectPath: Path = config.workingDirectory.resolve(project.name)
         val projectName = project.name
 
         runCommand(Seq("echo", s"'Running for project $projectName'"))
@@ -177,13 +176,12 @@ object GenerateInputFilesForMavenProjects extends ManagedLogger {
         identity
       )
     }
-  }
+  end runForMavenProject
 
-  private def runCommand(cmd: Seq[String])(implicit workingDirectory: Path): Int = {
+  private def runCommand(cmd: Seq[String])(using workingDirectory: Path): Int =
     runCommand(cmd, System.out)
-  }
 
-  private def runCommand(cmd: Seq[String], os: OutputStream)(implicit workingDirectory: Path): Int = {
+  private def runCommand(cmd: Seq[String], os: OutputStream)(using workingDirectory: Path): Int =
     // See https://www.baeldung.com/java-lang-processbuilder-api
     val processBuilder: ProcessBuilder = new ProcessBuilder(cmd: _*)
       .directory(workingDirectory.toFile)
@@ -202,21 +200,20 @@ object GenerateInputFilesForMavenProjects extends ManagedLogger {
 
     val exitValue = process.waitFor()
     exitValue
-  }
+  end runCommand
 
-  private def getFilePath(file: String, pathHelper: PathHelper): Path = {
+  private def getFilePath(file: String, pathHelper: PathHelper): Path =
     if (Path.of(file).isAbsolute) Path.of(file)
     else
       pathHelper
         .getResource(file)
         .pipe(_.getAbsolutePath)
         .pipe(path => Path.of(path))
-  }
 
-  private def parseJson(file: Path): Option[Json] = {
+  private def parseJson(file: Path): Option[Json] =
     file
       .pipe(path => Files.readString(path))
       .pipe(parser.parse)
       .toOption
-  }
-}
+
+end GenerateInputFilesForMavenProjects
