@@ -154,6 +154,7 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[?]]) extends ClassFun
       if (isAMatches.nonEmpty || hasAMatches.nonEmpty || methodParamOrReturnTypeMatches.nonEmpty) {
         Some(
           Json.obj(
+            "inspectedClass" -> Json.fromString(classToInspect.getTypeName),
             "is" -> Json.arr(isAMatches.map(c => Json.fromString(c.toString)): _*),
             "has" -> Json.arr(hasAMatches.map(c => Json.fromString(c.toString)): _*),
             "hasMethodsTakingOrReturning" -> Json.arr(methodParamOrReturnTypeMatches.map(c => Json.fromString(c.toString)): _*)
