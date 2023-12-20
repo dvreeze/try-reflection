@@ -18,9 +18,11 @@ package eu.cdevreeze.tryreflection.introspection.classfunctions
 
 import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunctionReturningJson}
 import io.circe.generic.semiauto._
-import io.circe.{Decoder, Json}
+import io.circe.syntax.EncoderOps
+import io.circe.{Decoder, Encoder, Json}
 
-import java.lang.reflect.{ParameterizedType, Type}
+import java.lang.annotation.Annotation
+import java.lang.reflect.{Constructor, Field, Method, ParameterizedType, Type}
 import scala.util.Try
 
 /**
@@ -31,6 +33,15 @@ import scala.util.Try
  *   Chris de Vreeze
  */
 final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFunctionReturningJson {
+
+  private implicit def constructorEncoder[A]: Encoder[Constructor[A]] = Encoder.encodeString.contramap(_.toGenericString)
+
+  private implicit val fieldEncoder: Encoder[Field] = Encoder.encodeString.contramap(_.toGenericString)
+
+  private implicit val methodEncoder: Encoder[Method] = Encoder.encodeString.contramap(_.toGenericString)
+
+  private implicit val annotationEncoder: Encoder[Annotation] = Encoder.encodeString.contramap(_.toString)
+
   def apply(clazz: Class[_]): Json =
     findClasses(classesToFind, clazz).getOrElse(Json.obj())
 
@@ -54,7 +65,7 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
           "interfaces" -> Json.arr(interfaces.map(c => Json.fromString(c.toString)): _*),
           "allGenericSuperclasses" -> Json.arr(allGenericSuperclasses.map(c => Json.fromString(c.toString)): _*),
           "allGenericInterfaces" -> Json.arr(allGenericInterfaces.map(c => Json.fromString(c.toString)): _*),
-          "constructors" -> Json.arr(constructors.map(c => Json.fromString(c.toString)): _*),
+          "constructors" -> Json.arr(constructors.map(_.asJson): _*),
           "foundTypeUsages" -> Json.fromValues(jsonsForFoundClasses),
           "summary" -> summaryJsonOption.getOrElse(Json.obj())
         )
@@ -80,9 +91,9 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       }
 
       val classAnnotations = classToInspect.getDeclaredAnnotations().toSeq
-      val constructorAnnotations = constructors.flatMap(_.getDeclaredAnnotations().toSeq)
-      val fieldAnnotations = fields.flatMap(_.getDeclaredAnnotations().toSeq)
-      val methodAnnotations = methods.flatMap(_.getDeclaredAnnotations().toSeq)
+      val constructorAnnotations = constructors.flatMap(_.getDeclaredAnnotations()).toSeq
+      val fieldAnnotations = fields.flatMap(_.getDeclaredAnnotations())
+      val methodAnnotations = methods.flatMap(_.getDeclaredAnnotations())
 
       val matchingClassAnnotations = classAnnotations.filter(a => classToFind.isAssignableFrom(a.annotationType()))
       val matchingConstructorAnnotations = constructorAnnotations.filter(a => classToFind.isAssignableFrom(a.annotationType()))
@@ -102,14 +113,12 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
             "superclassMatches" -> Json.fromBoolean(superclassMatches),
             "matchingInterfaces" -> Json.arr(matchingInterfaces.map(c => Json.fromString(c.toString)): _*),
             "matchingConstructors" -> Json.fromBoolean(matchingConstructors.nonEmpty),
-            "matchingFields" -> Json.arr(matchingFields.map(f => Json.fromString(f.getName)): _*),
-            "matchingMethods" -> Json.arr(matchingMethods.map(m => Json.fromString(m.getName)): _*),
-            "matchingClassAnnotations" -> Json.arr(matchingClassAnnotations.map(a => Json.fromString(a.toString)): _*),
-            "matchingConstructorAnnotations" -> Json.arr(
-              matchingConstructorAnnotations.toIndexedSeq.map(a => Json.fromString(a.toString)): _*
-            ),
-            "matchingFieldAnnotations" -> Json.arr(matchingFieldAnnotations.map(a => Json.fromString(a.toString)): _*),
-            "matchingMethodAnnotations" -> Json.arr(matchingMethodAnnotations.map(a => Json.fromString(a.toString)): _*)
+            "matchingFields" -> Json.arr(matchingFields.map(_.asJson): _*),
+            "matchingMethods" -> Json.arr(matchingMethods.map(_.asJson): _*),
+            "matchingClassAnnotations" -> Json.arr(matchingClassAnnotations.map(_.asJson): _*),
+            "matchingConstructorAnnotations" -> Json.arr(matchingConstructorAnnotations.map(_.asJson): _*),
+            "matchingFieldAnnotations" -> Json.arr(matchingFieldAnnotations.map(_.asJson): _*),
+            "matchingMethodAnnotations" -> Json.arr(matchingMethodAnnotations.map(_.asJson): _*)
           )
         )
       } else {
