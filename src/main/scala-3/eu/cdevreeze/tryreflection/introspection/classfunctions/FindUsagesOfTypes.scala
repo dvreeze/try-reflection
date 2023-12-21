@@ -50,7 +50,7 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[?]]) extends ClassFun
     val interfaces = classToInspect.getInterfaces().toSeq
     val constructors = classToInspect.getDeclaredConstructors().toSeq
 
-    val allGenericSuperclasses: Seq[Type] = findSuperclasses(classToInspect)
+    val allGenericSuperclasses: Seq[Type] = findAllSuperclasses(classToInspect)
     val allGenericInterfaces: Seq[Type] = findAllInterfaces(classToInspect)
 
     val jsonsForFoundClasses: Seq[Json] = classesToFind.flatMap(cls => findClass(cls, classToInspect))
@@ -183,20 +183,17 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[?]]) extends ClassFun
       .get
   end getSummary
 
-  private def findSuperclasses(clazz: Class[?]): Seq[Type] =
-    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
-    // Recursion
-    superclassOption
-      .map(cls => toClassOption(cls).toSeq.flatMap(findSuperclasses).prepended(cls))
-      .getOrElse(Seq.empty)
-
-  private def findInterfaces(clazz: Class[?]): Seq[Type] =
-    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
-    // Recursion
-    interfaces.appendedAll(interfaces.flatMap(toClassOption).flatMap(findInterfaces)).distinct
+  private def findAllSuperclasses(clazz: Class[?]): Seq[Type] =
+    findAllSupertypes(clazz).filter(cls => toClassOption(cls).exists(!_.isInterface))
 
   private def findAllInterfaces(clazz: Class[?]): Seq[Type] =
-    findSuperclasses(clazz).prepended(clazz).flatMap(toClassOption).flatMap(findInterfaces).distinct
+    findAllSupertypes(clazz).filter(cls => toClassOption(cls).exists(_.isInterface))
+
+  private def findAllSupertypes(clazz: Class[?]): Seq[Type] =
+    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
+    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
+    // Recursion
+    superclassOption.toSeq.appendedAll(interfaces).flatMap(toClassOption).flatMap(findAllSupertypes)
 
   private def toClassOption(tpe: Type): Option[Class[?]] =
     tpe match
