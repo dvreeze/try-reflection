@@ -192,8 +192,22 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[?]]) extends ClassFun
   private def findAllSupertypes(clazz: Class[?]): Seq[Type] =
     val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
     val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
+    superclassOption.toSeq
+      .appendedAll(interfaces)
+      .flatMap(toClassOption)
+      .flatMap(findAllSupertypesOrSelf)
+      .distinct
+
+  private def findAllSupertypesOrSelf(clazz: Class[?]): Seq[Type] =
+    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
+    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
     // Recursion
-    superclassOption.toSeq.appendedAll(interfaces).flatMap(toClassOption).flatMap(findAllSupertypes)
+    superclassOption.toSeq
+      .appendedAll(interfaces)
+      .flatMap(toClassOption)
+      .flatMap(findAllSupertypesOrSelf)
+      .prepended(clazz)
+      .distinct
 
   private def toClassOption(tpe: Type): Option[Class[?]] =
     tpe match

@@ -55,8 +55,23 @@ final class GetSupertypes() extends ClassFunctionReturningJson {
   private def findAllSupertypes(clazz: Class[_]): Seq[Type] = {
     val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
     val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
+    superclassOption.toSeq
+      .appendedAll(interfaces)
+      .flatMap(toClassOption)
+      .flatMap(findAllSupertypesOrSelf)
+      .distinct
+  }
+
+  private def findAllSupertypesOrSelf(clazz: Class[_]): Seq[Type] = {
+    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
+    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
     // Recursion
-    superclassOption.toSeq.appendedAll(interfaces).flatMap(toClassOption).flatMap(findAllSupertypes)
+    superclassOption.toSeq
+      .appendedAll(interfaces)
+      .flatMap(toClassOption)
+      .flatMap(findAllSupertypesOrSelf)
+      .prepended(clazz)
+      .distinct
   }
 
   private def toClassOption(tpe: Type): Option[Class[_]] = {
