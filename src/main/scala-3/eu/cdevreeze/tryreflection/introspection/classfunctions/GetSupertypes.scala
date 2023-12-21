@@ -16,10 +16,11 @@
 
 package eu.cdevreeze.tryreflection.introspection.classfunctions
 
+import eu.cdevreeze.tryreflection.internal.ReflectionUtils.*
 import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunctionReturningJson}
 import io.circe.Json
 
-import java.lang.reflect.{ParameterizedType, Type}
+import java.lang.reflect.Type
 
 /**
  * Class function that finds the super-classes and extended interfaces of a class.
@@ -30,9 +31,8 @@ import java.lang.reflect.{ParameterizedType, Type}
 final class GetSupertypes() extends ClassFunctionReturningJson:
 
   def apply(clazz: Class[?]): Json =
-    val superclasses: Seq[Type] = findAllSuperclasses(clazz)
-    val interfaces: Seq[Type] =
-      superclasses.prepended(clazz).flatMap(t => toClassOption(t)).flatMap(findAllInterfaces).distinct
+    val superclasses: Seq[Type] = findSuperclasses(clazz)
+    val interfaces: Seq[Type] = findAllInterfaces(clazz)
 
     Json.obj(
       "class" ->
@@ -43,38 +43,6 @@ final class GetSupertypes() extends ClassFunctionReturningJson:
         Json.fromValues(interfaces.map(_.toString).map(Json.fromString))
     )
   end apply
-
-  private def findAllSuperclasses(clazz: Class[?]): Seq[Type] =
-    findAllSupertypes(clazz).filter(cls => toClassOption(cls).exists(!_.isInterface))
-
-  private def findAllInterfaces(clazz: Class[?]): Seq[Type] =
-    findAllSupertypes(clazz).filter(cls => toClassOption(cls).exists(_.isInterface))
-
-  private def findAllSupertypes(clazz: Class[?]): Seq[Type] =
-    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
-    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
-    superclassOption.toSeq
-      .appendedAll(interfaces)
-      .flatMap(toClassOption)
-      .flatMap(findAllSupertypesOrSelf)
-      .distinct
-
-  private def findAllSupertypesOrSelf(clazz: Class[?]): Seq[Type] =
-    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
-    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
-    // Recursion
-    superclassOption.toSeq
-      .appendedAll(interfaces)
-      .flatMap(toClassOption)
-      .flatMap(findAllSupertypesOrSelf)
-      .prepended(clazz)
-      .distinct
-
-  private def toClassOption(tpe: Type): Option[Class[?]] =
-    tpe match
-      case cls: Class[?]            => Option(cls)
-      case ptype: ParameterizedType => Option(ptype.getRawType).collect { case cls: Class[?] => cls }
-      case _                        => None
 
 object GetSupertypes extends ClassFunctionFactory[Json, GetSupertypes]:
 

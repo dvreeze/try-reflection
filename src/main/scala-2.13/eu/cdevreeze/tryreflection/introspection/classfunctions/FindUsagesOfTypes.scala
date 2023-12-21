@@ -16,13 +16,14 @@
 
 package eu.cdevreeze.tryreflection.introspection.classfunctions
 
+import eu.cdevreeze.tryreflection.internal.ReflectionUtils._
 import eu.cdevreeze.tryreflection.introspection.{ClassFunctionFactory, ClassFunctionReturningJson}
 import io.circe.generic.semiauto._
 import io.circe.syntax.EncoderOps
 import io.circe.{Decoder, Encoder, Json}
 
 import java.lang.annotation.Annotation
-import java.lang.reflect.{Constructor, Field, Method, ParameterizedType, Type}
+import java.lang.reflect.{Constructor, Field, Method, Type}
 import scala.util.Try
 
 /**
@@ -50,7 +51,7 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
     val interfaces = classToInspect.getInterfaces().toSeq
     val constructors = classToInspect.getDeclaredConstructors().toSeq
 
-    val allGenericSuperclasses: Seq[Type] = findAllSuperclasses(classToInspect)
+    val allGenericSuperclasses: Seq[Type] = findSuperclasses(classToInspect)
     val allGenericInterfaces: Seq[Type] = findAllInterfaces(classToInspect)
 
     val jsonsForFoundClasses: Seq[Json] = classesToFind.flatMap(cls => findClass(cls, classToInspect))
@@ -185,44 +186,6 @@ final class FindUsagesOfTypes(val classesToFind: Seq[Class[_]]) extends ClassFun
       )
     }.toOption
       .get
-  }
-
-  private def findAllSuperclasses(clazz: Class[_]): Seq[Type] = {
-    findAllSupertypes(clazz).filter(cls => toClassOption(cls).exists(!_.isInterface))
-  }
-
-  private def findAllInterfaces(clazz: Class[_]): Seq[Type] = {
-    findAllSupertypes(clazz).filter(cls => toClassOption(cls).exists(_.isInterface))
-  }
-
-  private def findAllSupertypes(clazz: Class[_]): Seq[Type] = {
-    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
-    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
-    superclassOption.toSeq
-      .appendedAll(interfaces)
-      .flatMap(toClassOption)
-      .flatMap(findAllSupertypesOrSelf)
-      .distinct
-  }
-
-  private def findAllSupertypesOrSelf(clazz: Class[_]): Seq[Type] = {
-    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
-    val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
-    // Recursion
-    superclassOption.toSeq
-      .appendedAll(interfaces)
-      .flatMap(toClassOption)
-      .flatMap(findAllSupertypesOrSelf)
-      .prepended(clazz)
-      .distinct
-  }
-
-  private def toClassOption(tpe: Type): Option[Class[_]] = {
-    tpe match {
-      case cls: Class[_]            => Option(cls)
-      case ptype: ParameterizedType => Option(ptype.getRawType).collect { case cls: Class[_] => cls }
-      case _                        => None
-    }
   }
 }
 
