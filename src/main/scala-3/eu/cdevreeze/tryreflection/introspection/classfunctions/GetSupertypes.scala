@@ -30,9 +30,9 @@ import java.lang.reflect.{ParameterizedType, Type}
 final class GetSupertypes() extends ClassFunctionReturningJson:
 
   def apply(clazz: Class[?]): Json =
-    val superclasses: Seq[Type] = findSuperclasses(clazz)
+    val superclasses: Seq[Type] = findAllSuperclasses(clazz)
     val interfaces: Seq[Type] =
-      superclasses.prepended(clazz).flatMap(t => toClassOption(t)).flatMap(findInterfaces).distinct
+      superclasses.prepended(clazz).flatMap(t => toClassOption(t)).flatMap(findAllInterfaces).distinct
 
     Json.obj(
       "class" ->
@@ -44,17 +44,17 @@ final class GetSupertypes() extends ClassFunctionReturningJson:
     )
   end apply
 
-  private def findSuperclasses(clazz: Class[?]): Seq[Type] =
-    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
-    // Recursion
-    superclassOption
-      .map(cls => toClassOption(cls).toSeq.flatMap(findSuperclasses).prepended(cls))
-      .getOrElse(Seq.empty)
+  private def findAllSuperclasses(clazz: Class[?]): Seq[Type] =
+    findAllSupertypes(clazz).filter(cls => toClassOption(cls).exists(!_.isInterface))
 
-  private def findInterfaces(clazz: Class[?]): Seq[Type] =
+  private def findAllInterfaces(clazz: Class[?]): Seq[Type] =
+    findAllSupertypes(clazz).filter(cls => toClassOption(cls).exists(_.isInterface))
+
+  private def findAllSupertypes(clazz: Class[?]): Seq[Type] =
+    val superclassOption: Option[Type] = Option(clazz.getGenericSuperclass())
     val interfaces: Seq[Type] = clazz.getGenericInterfaces().toSeq
     // Recursion
-    interfaces.appendedAll(interfaces.flatMap(toClassOption).flatMap(findInterfaces)).distinct
+    superclassOption.toSeq.appendedAll(interfaces).flatMap(toClassOption).flatMap(findAllSupertypes)
 
   private def toClassOption(tpe: Type): Option[Class[?]] =
     tpe match
