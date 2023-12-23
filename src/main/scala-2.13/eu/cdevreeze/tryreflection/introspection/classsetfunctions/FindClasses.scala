@@ -58,7 +58,7 @@ final class FindClasses(val config: Config) extends ClassSetFunctionReturningJso
                         constructors.map(c => Json.fromString(c.toGenericString))
                       }
                     } else {
-                      null
+                      Json.Null
                     }
                   }
                 )

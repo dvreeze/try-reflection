@@ -52,14 +52,12 @@ final class FindClasses(val config: Config) extends ClassSetFunctionReturningJso
                   "name" -> Json.fromString(cls.getName),
                   "genericType" -> Json.fromString(cls.toGenericString),
                   "constructors" -> {
-                    if (classSection.showConstructors) {
+                    if classSection.showConstructors then
                       Json.fromValues {
                         val constructors = cls.getDeclaredConstructors().toSeq
                         constructors.map(c => Json.fromString(c.toGenericString))
                       }
-                    } else {
-                      null
-                    }
+                    else Json.Null
                   }
                 )
                 .dropNullValues
