@@ -63,15 +63,44 @@ final class FindClasses(val config: Config) extends ClassSetFunctionReturningJso
     classSection.classFilters.exists {
       case f @ ClassFilter.AssignableTo(_) =>
         isAssignableTo(clazz, f)
-      case f @ ClassFilter.HasPublicMethod(_, _, _) =>
-        hasPublicMethod(clazz, f)
+      case f @ ClassFilter.UsesType(_) =>
+        usesType(clazz, f)
+      case f @ ClassFilter.HasAnnotation(_) =>
+        hasAnnotation(clazz, f)
     }
 
   private def isAssignableTo(classToInspect: Class[?], objectFilter: ClassFilter.AssignableTo): Boolean =
     Try(Class.forName(objectFilter.className).isAssignableFrom(classToInspect)).getOrElse(false)
 
-  private def hasPublicMethod(classToInspect: Class[?], objectFilter: ClassFilter.HasPublicMethod): Boolean =
-    sys.error(s"Not yet implemented (finding by method, that is)")
+  private def usesType(classToInspect: Class[?], objectFilter: ClassFilter.UsesType): Boolean =
+    Try {
+      val constructors = classToInspect.getDeclaredConstructors().toSeq
+      val fields = classToInspect.getDeclaredFields().toSeq
+
+      val typeToFind: Class[?] = Class.forName(objectFilter.className)
+
+      fields.exists(fld => typeToFind.isAssignableFrom(fld.getType())) ||
+      constructors.exists(_.getParameterTypes().exists(c => typeToFind.isAssignableFrom(c)))
+    }.getOrElse(false)
+
+  private def hasAnnotation(classToInspect: Class[?], objectFilter: ClassFilter.HasAnnotation): Boolean =
+    Try {
+      val constructors = classToInspect.getDeclaredConstructors().toSeq
+      val fields = classToInspect.getDeclaredFields().toSeq
+      val methods = classToInspect.getDeclaredMethods().toSeq
+
+      val classAnnotations = classToInspect.getDeclaredAnnotations().toSeq
+      val constructorAnnotations = constructors.flatMap(_.getDeclaredAnnotations().toSeq)
+      val fieldAnnotations = fields.flatMap(_.getDeclaredAnnotations().toSeq)
+      val methodAnnotations = methods.flatMap(_.getDeclaredAnnotations().toSeq)
+
+      val typeToFind: Class[?] = Class.forName(objectFilter.className)
+
+      classAnnotations.exists(a => typeToFind.isAssignableFrom(a.annotationType())) ||
+      constructorAnnotations.exists(a => typeToFind.isAssignableFrom(a.annotationType())) ||
+      fieldAnnotations.exists(a => typeToFind.isAssignableFrom(a.annotationType())) ||
+      methodAnnotations.exists(a => typeToFind.isAssignableFrom(a.annotationType()))
+    }.getOrElse(false)
 
   private def isAbstractClass(clazz: Class[?]): Boolean =
     val isAbstract = Modifier.isAbstract(clazz.getModifiers)
@@ -81,16 +110,15 @@ object FindClasses extends ClassSetFunctionFactory[Json, FindClasses]:
 
   enum KindOfFilter:
     case AssignableTo
-    case HasPublicMethod
+    case UsesType
+    case HasAnnotation
 
   final case class InternalClassFilter(kindOfFilter: KindOfFilter, filterValue: Json)
 
-  final case class InternalMethodSignature(methodName: String, returnType: String, parameterTypes: Seq[String])
-
   enum ClassFilter(kindOfFilter: KindOfFilter):
     case AssignableTo(className: String) extends ClassFilter(KindOfFilter.AssignableTo)
-    case HasPublicMethod(methodName: String, returnType: String, parameterTypes: Seq[String])
-        extends ClassFilter(KindOfFilter.HasPublicMethod)
+    case UsesType(className: String) extends ClassFilter(KindOfFilter.UsesType)
+    case HasAnnotation(className: String) extends ClassFilter(KindOfFilter.HasAnnotation)
 
   final case class ClassSection(description: String, classFilters: Seq[ClassFilter])
 
@@ -99,26 +127,24 @@ object FindClasses extends ClassSetFunctionFactory[Json, FindClasses]:
   private given Decoder[KindOfFilter] = Decoder.decodeString.emapTry { s =>
     Try {
       s match
-        case "AssignableTo"    => KindOfFilter.AssignableTo
-        case "HasPublicMethod" => KindOfFilter.HasPublicMethod
-        case s                 => sys.error(s"Not a KindOfFilter: '$s'")
+        case "AssignableTo"  => KindOfFilter.AssignableTo
+        case "UsesType"      => KindOfFilter.UsesType
+        case "HasAnnotation" => KindOfFilter.HasAnnotation
+        case s               => sys.error(s"Not a KindOfFilter: '$s'")
     }
   }
 
   private given Decoder[InternalClassFilter] = deriveDecoder[InternalClassFilter]
-
-  private given Decoder[InternalMethodSignature] = deriveDecoder[InternalMethodSignature]
 
   private given Decoder[ClassFilter] =
     summon[Decoder[InternalClassFilter]].emapTry { internalClassFilter =>
       internalClassFilter.kindOfFilter match
         case KindOfFilter.AssignableTo =>
           internalClassFilter.filterValue.as[String].toTry.map(s => ClassFilter.AssignableTo(s))
-        case KindOfFilter.HasPublicMethod =>
-          internalClassFilter.filterValue
-            .as[InternalMethodSignature]
-            .toTry
-            .map(m => ClassFilter.HasPublicMethod(m.methodName, m.returnType, m.parameterTypes))
+        case KindOfFilter.UsesType =>
+          internalClassFilter.filterValue.as[String].toTry.map(s => ClassFilter.UsesType(s))
+        case KindOfFilter.HasAnnotation =>
+          internalClassFilter.filterValue.as[String].toTry.map(s => ClassFilter.HasAnnotation(s))
     }
 
   private given Decoder[ClassSection] = deriveDecoder[ClassSection]
