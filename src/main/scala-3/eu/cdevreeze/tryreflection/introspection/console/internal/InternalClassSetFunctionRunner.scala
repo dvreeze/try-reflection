@@ -26,20 +26,20 @@ import org.burningwave.core.io.{FileSystemItem, PathHelper}
 
 import java.nio.file.{Files, Path}
 import scala.collection.immutable.ListSet
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.chaining.scalaUtilChainingOps
 import scala.util.{Try, Using}
 
 /**
- * Internal ClassSetFunctionRunnerIteratingOverClassPath runner, called as program in a different OS process from
- * ClassSetFunctionRunnerIteratingOverClassPath. The calling program makes sure this program runs with the correct classpath. Having the
- * correct classpath, this program does all the work of running a ClassSetFunction on given parts of the classpath. The 2 program arguments
- * are JSON config resource paths, one for the runner, and one for the ClassSetFunction initialisation.
+ * Internal ClassSetFunctionRunner runner, called as program in a different OS process from ClassSetFunctionRunner. The calling program
+ * makes sure this program runs with the correct classpath. Having the correct classpath, this program does all the work of running a
+ * ClassSetFunction on given parts of the classpath. The 2 program arguments are JSON config resource paths, one for the runner, and one for
+ * the ClassSetFunction initialisation.
  *
  * @author
  *   Chris de Vreeze
  */
-object InternalClassSetFunctionRunnerIteratingOverClassPath {
+object InternalClassSetFunctionRunner:
 
   final case class Config(
       packagePaths: Set[String], // Sub-packages will also be iterated over
@@ -47,14 +47,14 @@ object InternalClassSetFunctionRunnerIteratingOverClassPath {
       searchPathsWithinClassPath: Seq[String] // May be partial, such as just a JAR file name without path
   )
 
-  private implicit val configDecoder: Decoder[Config] = deriveDecoder[Config]
+  private given Decoder[Config] = deriveDecoder[Config]
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit =
     val (configJsonPath, classSetFunctionConfigJsonPath) =
       args
         .ensuring(
           _.sizeIs == 2,
-          s"Usage: InternalClassSetFunctionRunnerIteratingOverClassPath <JSON config resource path> <ClassSetFunction JSON config resource path>"
+          s"Usage: InternalClassSetFunctionRunner <JSON config resource path> <ClassSetFunction JSON config resource path>"
         )
         .pipe(args => (args(0), args(1)))
 
@@ -77,7 +77,7 @@ object InternalClassSetFunctionRunnerIteratingOverClassPath {
         .getOrElse(sys.error(s"Could not interpret the JSON program argument as ClassSetFunctionFactories.Config"))
 
     val searchPaths: java.util.Collection[String] =
-      if (config.searchPathsWithinClassPath.isEmpty) pathHelper.getAllMainClassPaths
+      if config.searchPathsWithinClassPath.isEmpty then pathHelper.getAllMainClassPaths
       else pathHelper.getPaths(p => config.searchPathsWithinClassPath.exists(cfgPath => p.contains(cfgPath)))
 
     val searchConfigForInputClasses = SearchConfig
@@ -101,34 +101,31 @@ object InternalClassSetFunctionRunnerIteratingOverClassPath {
         val classSetFunction: ClassSetFunctionReturningJson =
           classSetFunctionConfigResolver.resolveClassSetFunction(classHunter)
 
-        val clazzes: Seq[Class[_]] = searchResult.getClasses.asScala.toList
+        val clazzes: Seq[Class[?]] = searchResult.getClasses.asScala.toList
 
         classSetFunction(clazzes.to(ListSet))
       }
 
     println(jsonResult)
-  }
+  end main
 
-  private def getFilePath(file: String, pathHelper: PathHelper): Path = {
-    if (Path.of(file).isAbsolute) Path.of(file)
+  private def getFilePath(file: String, pathHelper: PathHelper): Path =
+    if Path.of(file).isAbsolute then Path.of(file)
     else
       pathHelper
         .getResource(file)
         .pipe(_.getAbsolutePath)
         .pipe(path => Path.of(path))
-  }
 
-  private def parseJson(file: Path): Option[Json] = {
+  private def parseJson(file: Path): Option[Json] =
     file
       .pipe(path => Files.readString(path))
       .pipe(parser.parse)
       .toOption
-  }
 
-  private def skipClass(clazz: JavaClass): Boolean = {
+  private def skipClass(clazz: JavaClass): Boolean =
     val classNameWithoutExtension = clazz.getClassFileName.stripSuffix(".class")
     classNameWithoutExtension.stripSuffix("$").contains("$") ||
     classNameWithoutExtension.contains("package")
-  }
 
-}
+end InternalClassSetFunctionRunner

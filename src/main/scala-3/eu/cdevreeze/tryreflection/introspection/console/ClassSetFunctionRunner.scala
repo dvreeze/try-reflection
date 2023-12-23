@@ -28,10 +28,10 @@ import scala.util.Using
 import scala.util.chaining.scalaUtilChainingOps
 
 /**
- * ClassSetFunction runner iterating over classes on the classpath. It takes 2 JSON config files (for runner and class set function), as
+ * ClassSetFunction runner taking a subset of classes on the classpath. It takes 2 JSON config files (for runner and class set function), as
  * well as a class path file.
  *
- * It forks program InternalClassSetFunctionRunnerIteratingOverClassPath in a different OS process, enhancing its classpath.
+ * It forks program InternalClassSetFunctionRunner in a different OS process, enhancing its classpath.
  *
  * The class path file could come from running command "mvn dependency:build-classpath", or command "cs fetch" on some artifact. Do not
  * forget to then filter out the Scala library etc.
@@ -39,7 +39,7 @@ import scala.util.chaining.scalaUtilChainingOps
  * @author
  *   Chris de Vreeze
  */
-object ClassSetFunctionRunnerIteratingOverClassPath extends ManagedLogger:
+object ClassSetFunctionRunner extends ManagedLogger:
 
   final case class Config(
       packagePaths: Set[String], // Sub-packages will also be iterated over
@@ -52,7 +52,7 @@ object ClassSetFunctionRunnerIteratingOverClassPath extends ManagedLogger:
   def main(args: Array[String]): Unit =
     require(
       args.sizeIs == 3,
-      s"Usage: ClassSetFunctionRunnerIteratingOverClassPath <JSON config resource path> <ClassSetFunction JSON config resource path> <classpath file> "
+      s"Usage: ClassSetFunctionRunner <JSON config resource path> <ClassSetFunction JSON config resource path> <classpath file> "
     )
     val configJsonPath: String = args(0)
     val classSetFunctionConfigJsonPath: String = args(1)
@@ -83,7 +83,7 @@ object ClassSetFunctionRunnerIteratingOverClassPath extends ManagedLogger:
     Files.writeString(cpFile, s"-cp $totalClassPath")
 
     val mainClassName: String =
-      "eu.cdevreeze.tryreflection.introspection.console.internal.InternalClassSetFunctionRunnerIteratingOverClassPath"
+      "eu.cdevreeze.tryreflection.introspection.console.internal.InternalClassSetFunctionRunner"
 
     // See https://docs.oracle.com/javase/9/tools/java.htm#JSWOR-GUID-4856361B-8BFD-4964-AE84-121F5F6CF111
     val javaCommand: Seq[String] =
@@ -145,4 +145,4 @@ object ClassSetFunctionRunnerIteratingOverClassPath extends ManagedLogger:
     ownClassPath.mkString(":") + ":" + extraClassPath.mkString(":")
   end getCombinedClassPath
 
-end ClassSetFunctionRunnerIteratingOverClassPath
+end ClassSetFunctionRunner
