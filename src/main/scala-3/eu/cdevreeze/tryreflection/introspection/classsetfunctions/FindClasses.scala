@@ -76,11 +76,14 @@ final class FindClasses(val config: Config) extends ClassSetFunctionReturningJso
     Try {
       val constructors = classToInspect.getDeclaredConstructors().toSeq
       val fields = classToInspect.getDeclaredFields().toSeq
+      val methods = classToInspect.getDeclaredMethods().toSeq
 
       val typeToFind: Class[?] = Class.forName(objectFilter.className)
 
       fields.exists(fld => typeToFind.isAssignableFrom(fld.getType())) ||
-      constructors.exists(_.getParameterTypes().exists(c => typeToFind.isAssignableFrom(c)))
+      constructors.exists(_.getParameterTypes().exists(c => typeToFind.isAssignableFrom(c))) ||
+      methods.exists(_.getParameterTypes().exists(c => typeToFind.isAssignableFrom(c))) ||
+      methods.exists(m => typeToFind.isAssignableFrom(m.getReturnType))
     }.getOrElse(false)
 
   private def hasAnnotation(classToInspect: Class[?], objectFilter: ClassFilter.HasAnnotation): Boolean =
