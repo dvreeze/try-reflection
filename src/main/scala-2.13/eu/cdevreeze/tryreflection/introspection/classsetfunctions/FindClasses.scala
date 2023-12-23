@@ -16,12 +16,13 @@
 
 package eu.cdevreeze.tryreflection.introspection.classsetfunctions
 
-import eu.cdevreeze.tryreflection.introspection.classsetfunctions.FindClasses.{ClassFilter, Config}
+import eu.cdevreeze.tryreflection.introspection.classsetfunctions.FindClasses.{ClassFilter, ClassSection, Config}
 import eu.cdevreeze.tryreflection.introspection.{ClassSetFunctionFactory, ClassSetFunctionReturningJson}
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.{Decoder, Json}
 
 import java.lang.reflect.Modifier
+import scala.collection.immutable.ListSet
 import scala.util.Try
 
 /**
@@ -33,37 +34,37 @@ import scala.util.Try
 final class FindClasses(val config: Config) extends ClassSetFunctionReturningJson {
 
   def apply(clazzes: Set[Class[_]]): Json = {
-    val resultsPerClass: Seq[Json] = clazzes.toSeq.flatMap { cls =>
-      Try(applyForClass(cls)).toOption.filterNot(_ == Json.obj())
-    }
-    Json.fromValues(resultsPerClass)
-  }
+    val filteredClasses: Set[Class[_]] = clazzes.toSeq
+      .filterNot(cls => cls.isInterface && config.ignoreInterface)
+      .filterNot(cls => isAbstractClass(cls) && config.ignoreAbstractClass)
+      .to(ListSet)
 
-  private def applyForClass(clazz: Class[_]): Json = {
-    if ((clazz.isInterface && config.ignoreInterface) || (isAbstractClass(clazz) && config.ignoreAbstractClass)) {
-      Json.obj()
-    } else {
-      val matchingSectionDescriptions: Seq[String] =
-        config.classSections
-          .filter { classSection =>
-            classSection.classFilters.exists {
-              case f @ ClassFilter.AssignableTo(_) =>
-                isAssignableTo(clazz, f)
-              case f @ ClassFilter.HasPublicMethod(_, _, _) =>
-                hasPublicMethod(clazz, f)
-            }
-          }
-          .map(_.description)
-          .distinct
+    val classSectionJsons: Seq[Json] = config.classSections
+      .map { classSection =>
+        val matchingClasses: Set[Class[_]] = filteredClasses.filter(cls => matchFound(cls, classSection))
 
-      if (matchingSectionDescriptions.isEmpty) Json.obj()
-      else {
         Json.obj(
-          "className" -> Json.fromString(clazz.getTypeName),
-          "class" -> Json.fromString(clazz.toGenericString),
-          "is" -> Json.fromValues(matchingSectionDescriptions.sorted.map(Json.fromString))
+          "groupName" -> Json.fromString(classSection.description),
+          "typesFound" -> Json.fromValues(
+            matchingClasses.map { cls =>
+              Json.obj(
+                "name" -> Json.fromString(cls.getName),
+                "genericType" -> Json.fromString(cls.toGenericString)
+              )
+            }
+          )
         )
       }
+
+    Json.fromValues(classSectionJsons)
+  }
+
+  private def matchFound(clazz: Class[_], classSection: ClassSection): Boolean = {
+    classSection.classFilters.exists {
+      case f @ ClassFilter.AssignableTo(_) =>
+        isAssignableTo(clazz, f)
+      case f @ ClassFilter.HasPublicMethod(_, _, _) =>
+        hasPublicMethod(clazz, f)
     }
   }
 

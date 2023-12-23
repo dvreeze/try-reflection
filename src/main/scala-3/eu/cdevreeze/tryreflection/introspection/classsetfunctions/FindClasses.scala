@@ -22,6 +22,7 @@ import io.circe.generic.semiauto.deriveDecoder
 import io.circe.{Decoder, Json}
 
 import java.lang.reflect.Modifier
+import scala.collection.immutable.ListSet
 import scala.util.Try
 
 /**
@@ -33,37 +34,38 @@ import scala.util.Try
 final class FindClasses(val config: Config) extends ClassSetFunctionReturningJson:
 
   def apply(clazzes: Set[Class[?]]): Json =
-    val resultsPerClass: Seq[Json] = clazzes.toSeq.flatMap { cls =>
-      Try(applyForClass(cls)).toOption.filterNot(_ == Json.obj())
-    }
-    Json.fromValues(resultsPerClass)
+    val filteredClasses: Set[Class[?]] = clazzes.toSeq
+      .filterNot(cls => cls.isInterface && config.ignoreInterface)
+      .filterNot(cls => isAbstractClass(cls) && config.ignoreAbstractClass)
+      .to(ListSet)
 
-  private def applyForClass(clazz: Class[?]): Json =
-    if (clazz.isInterface && config.ignoreInterface) || (isAbstractClass(clazz) && config.ignoreAbstractClass)
-    then Json.obj()
-    else
-      val matchingSectionDescriptions: Seq[String] =
-        config.classSections
-          .filter { classSection =>
-            classSection.classFilters.exists {
-              case f @ ClassFilter.AssignableTo(_) =>
-                isAssignableTo(clazz, f)
-              case f @ ClassFilter.HasPublicMethod(_, _, _) =>
-                hasPublicMethod(clazz, f)
-            }
-          }
-          .map(_.description)
-          .distinct
+    val classSectionJsons: Seq[Json] = config.classSections
+      .map { classSection =>
+        val matchingClasses: Set[Class[?]] = filteredClasses.filter(cls => matchFound(cls, classSection))
 
-      if matchingSectionDescriptions.isEmpty then Json.obj()
-      else
         Json.obj(
-          "className" -> Json.fromString(clazz.getTypeName),
-          "class" -> Json.fromString(clazz.toGenericString),
-          "is" -> Json.fromValues(matchingSectionDescriptions.sorted.map(Json.fromString))
+          "groupName" -> Json.fromString(classSection.description),
+          "typesFound" -> Json.fromValues(
+            matchingClasses.map { cls =>
+              Json.obj(
+                "name" -> Json.fromString(cls.getName),
+                "genericType" -> Json.fromString(cls.toGenericString)
+              )
+            }
+          )
         )
-    end if
-  end applyForClass
+      }
+
+    Json.fromValues(classSectionJsons)
+  end apply
+
+  private def matchFound(clazz: Class[?], classSection: ClassSection): Boolean =
+    classSection.classFilters.exists {
+      case f @ ClassFilter.AssignableTo(_) =>
+        isAssignableTo(clazz, f)
+      case f @ ClassFilter.HasPublicMethod(_, _, _) =>
+        hasPublicMethod(clazz, f)
+    }
 
   private def isAssignableTo(classToInspect: Class[?], objectFilter: ClassFilter.AssignableTo): Boolean =
     Try(Class.forName(objectFilter.className).isAssignableFrom(classToInspect)).getOrElse(false)
