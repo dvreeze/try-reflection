@@ -31,9 +31,9 @@ import scala.util.chaining.scalaUtilChainingOps
 import scala.util.{Try, Using}
 
 /**
- * Generator of input files for ClassFunctionRunnerIteratingOverClassPath, for Maven projects in a given workspace directory. For each such
+ * Generator of input files for ClassSetFunctionRunnerIteratingOverClassPath, for Maven projects in a given workspace directory. For each such
  * project, a JSON configuration file and class path file are generated. This program is unaware of the class function to be used, just like
- * the ClassFunctionRunnerIteratingOverClassPath program itself is unaware of the specific class function used. So the class function JSON
+ * the ClassSetFunctionRunnerIteratingOverClassPath program itself is unaware of the specific class function used. So the class function JSON
  * config file is out of scope for this program.
  *
  * @author

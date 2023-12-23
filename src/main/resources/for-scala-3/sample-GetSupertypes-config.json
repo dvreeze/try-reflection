@@ -1,6 +1,6 @@
 {
   "name": "GetSupertypes-zio",
-  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.GetSupertypes$",
-  "classFunctionFactoryJsonInput": {
+  "classSetFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classsetfunctions.GetSupertypes$",
+  "classSetFunctionFactoryJsonInput": {
   }
 }

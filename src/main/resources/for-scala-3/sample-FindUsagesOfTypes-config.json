@@ -1,7 +1,7 @@
 {
   "name": "FindUsagesOfTypes-zio",
-  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.FindUsagesOfTypes$",
-  "classFunctionFactoryJsonInput": {
+  "classSetFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classsetfunctions.FindUsagesOfTypes$",
+  "classSetFunctionFactoryJsonInput": {
     "classesToFind": [ "scala.util.Try", "scala.util.Try$" ]
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "FindObjects-zio",
-  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.FindClasses$",
-  "classFunctionFactoryJsonInput": {
+  "classSetFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classsetfunctions.FindClasses$",
+  "classSetFunctionFactoryJsonInput": {
     "ignoreInterface": true,
     "ignoreAbstractClass": true,
     "classSections": [
