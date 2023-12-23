@@ -1,0 +1,28 @@
+{
+  "name": "FindObjects-zio",
+  "classFunctionFactoryClass": "eu.cdevreeze.tryreflection.introspection.classfunctions.FindClasses$",
+  "classFunctionFactoryJsonInput": {
+    "ignoreInterface": true,
+    "ignoreAbstractClass": true,
+    "classSections": [
+      {
+        "description": "ZIO Effect",
+        "classFilters": [
+          {
+            "kindOfFilter": "AssignableTo",
+            "filterValue": "zio.ZIO"
+          }
+        ]
+      },
+      {
+        "description": "ZIO Layer",
+        "classFilters": [
+          {
+            "kindOfFilter": "AssignableTo",
+            "filterValue": "zio.ZLayer"
+          }
+        ]
+      }
+    ]
+  }
+}
