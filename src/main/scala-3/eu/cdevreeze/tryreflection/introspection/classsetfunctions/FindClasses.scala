@@ -47,10 +47,22 @@ final class FindClasses(val config: Config) extends ClassSetFunctionReturningJso
           "groupName" -> Json.fromString(classSection.description),
           "typesFound" -> Json.fromValues(
             matchingClasses.map { cls =>
-              Json.obj(
-                "name" -> Json.fromString(cls.getName),
-                "genericType" -> Json.fromString(cls.toGenericString)
-              )
+              Json
+                .obj(
+                  "name" -> Json.fromString(cls.getName),
+                  "genericType" -> Json.fromString(cls.toGenericString),
+                  "constructors" -> {
+                    if (classSection.showConstructors) {
+                      Json.fromValues {
+                        val constructors = cls.getDeclaredConstructors().toSeq
+                        constructors.map(c => Json.fromString(c.toGenericString))
+                      }
+                    } else {
+                      null
+                    }
+                  }
+                )
+                .dropNullValues
             }
           )
         )
@@ -123,7 +135,7 @@ object FindClasses extends ClassSetFunctionFactory[Json, FindClasses]:
     case UsesType(className: String) extends ClassFilter(KindOfFilter.UsesType)
     case HasAnnotation(className: String) extends ClassFilter(KindOfFilter.HasAnnotation)
 
-  final case class ClassSection(description: String, classFilters: Seq[ClassFilter])
+  final case class ClassSection(description: String, showConstructors: Boolean, classFilters: Seq[ClassFilter])
 
   final case class Config(ignoreInterface: Boolean = true, ignoreAbstractClass: Boolean = true, classSections: Seq[ClassSection])
 

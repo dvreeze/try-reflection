@@ -7,6 +7,7 @@
     "classSections": [
       {
         "description": "ZIO Effect",
+        "showConstructors": false,
         "classFilters": [
           {
             "kindOfFilter": "AssignableTo",
@@ -16,6 +17,7 @@
       },
       {
         "description": "ZIO Layer",
+        "showConstructors": false,
         "classFilters": [
           {
             "kindOfFilter": "AssignableTo",
